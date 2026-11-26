@@ -21,7 +21,7 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-test('venda: bipe antes da cliente não se perde, pagamento misto PIX + dinheiro com troco + fiado', async ({ page }) => {
+test('venda: bipe antes da cliente não se perde, pagamento misto PIX + dinheiro com troco + crediário', async ({ page }) => {
   await page.getByRole('link', { name: /Vender/ }).click();
   await bipar(page, '7891000000017');
   await expect(page.getByText(/1 produto já guardado/)).toBeVisible();
@@ -50,9 +50,9 @@ test('venda: bipe antes da cliente não se perde, pagamento misto PIX + dinheiro
   await digitar(page, '100');
   await page.getByRole('button', { name: /^Lançar R\$ 100,00 em dinheiro/ }).click();
 
-  await page.getByRole('button', { name: /Restante no fiado/ }).click();
+  await page.getByRole('button', { name: /Restante no crediário/ }).click();
   await page.getByRole('button', { name: '2×' }).click();
-  await page.getByRole('button', { name: /^Lançar R\$ 199,70 no fiado/ }).click();
+  await page.getByRole('button', { name: /^Lançar R\$ 199,70 no crediário/ }).click();
   await expect(page.getByTestId('falta')).toHaveText('R$ 0,00');
 
   await page.getByRole('button', { name: /Concluir e imprimir/ }).click();
@@ -65,8 +65,8 @@ test('venda: bipe antes da cliente não se perde, pagamento misto PIX + dinheiro
   await expect(page.getByText('R$ 259,70')).toBeVisible();
 });
 
-test('receber fiado: abate primeiro a parcela mais antiga e mostra o saldo', async ({ page }) => {
-  await page.getByRole('link', { name: /Receber fiado/ }).click();
+test('receber crediário: abate primeiro a parcela mais antiga e mostra o saldo', async ({ page }) => {
+  await page.getByRole('link', { name: /Receber crediário/ }).click();
   await page.getByRole('button', { name: /Rosa Almeida/ }).first().click();
   await expect(page.getByText('Vencido R$ 60,00')).toBeVisible();
   await page.getByRole('button', { name: /Outro valor/ }).click();
@@ -92,7 +92,7 @@ test('venda não conclui sem pagar tudo e código desconhecido oferece cadastro'
 });
 
 test('teclado físico funciona onde há teclado na tela, e o leitor não digita no valor', async ({ page }) => {
-  await page.getByRole('link', { name: /Receber fiado/ }).click();
+  await page.getByRole('link', { name: /Receber crediário/ }).click();
   await page.getByRole('button', { name: /Rosa Almeida/ }).first().click();
   await page.getByRole('button', { name: /Outro valor/ }).click();
   await page.keyboard.type('25.5', { delay: 100 });

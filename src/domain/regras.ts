@@ -106,7 +106,7 @@ export function validarVenda(p: FinalizarVendaPayload): string | null {
     if (x.forma === 'dinheiro' && (x.valor_recebido ?? x.valor) < x.valor) return 'Valor recebido em dinheiro menor que o pagamento.';
     if (x.forma === 'cartao' && (x.valor_recebido ?? x.valor) < x.valor) return 'Valor cobrado no cartão menor que o pagamento.';
     if (x.forma === 'cartao' && (!x.parcelas || x.parcelas < 1 || x.parcelas > 12)) return 'Parcelas do cartão entre 1 e 12.';
-    if (x.forma === 'fiado' && (!x.parcelas || x.parcelas < 1 || !x.primeiro_vencimento)) return 'Informe as parcelas do fiado.';
+    if (x.forma === 'fiado' && (!x.parcelas || x.parcelas < 1 || !x.primeiro_vencimento)) return 'Informe as parcelas do crediário.';
   }
   return null;
 }

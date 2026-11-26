@@ -45,7 +45,7 @@ export default function Inicio() {
         <h1 className="m-0 text-[52px] font-bold">{saudacao(agora)}! O que vamos fazer?</h1>
         <div className="grid flex-1 grid-cols-2 grid-rows-3 gap-7">
           <Opcao para="/terminal/venda" icone="sacola" titulo="Vender" sub="Começa pela cliente" destaque className="col-span-2" />
-          <Opcao para="/terminal/receber" icone="carteira" titulo="Receber fiado" sub="Quando a cliente paga uma parcela" />
+          <Opcao para="/terminal/receber" icone="carteira" titulo="Receber crediário" sub="Quando a cliente paga uma parcela" />
           <Opcao para="/terminal/mercadoria" icone="caixa" titulo="Chegou mercadoria" sub="Dar entrada no estoque" />
           <Opcao para="/terminal/clientes" icone="pessoas" titulo="Clientes" sub="Buscar, cadastrar, ver o que deve" />
           <Opcao para="/terminal/estoque" icone="grafico" titulo="Estoque" sub="Ver, contar e mudar preços" />

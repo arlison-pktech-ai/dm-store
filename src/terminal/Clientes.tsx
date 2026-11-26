@@ -98,7 +98,7 @@ function Ficha({ id }: { id: string }) {
       </main>
       {cancelar && (
         <PinJanela titulo={`Cancelar a venda ${numeroVenda(cancelar.numero)}?`} pedirMotivo motivos={['Cliente desistiu', 'Lançada errada', 'Troca', 'Outro']}
-          descricao={`${brl(cancelar.total)} · o estoque volta e as parcelas do fiado são canceladas.`}
+          descricao={`${brl(cancelar.total)} · o estoque volta e as parcelas do crediário são canceladas.`}
           onFechar={() => setCancelar(null)}
           onConfirmar={async (pin, motivo) => {
             await backend.cancelarVenda(cancelar.id, motivo, pin);

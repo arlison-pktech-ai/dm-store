@@ -72,9 +72,9 @@ function Configuracoes() {
           </label>
         ))}
       </div>
-      <label className="flex items-center gap-2 text-[14px]"><input type="checkbox" checked={c.vias_fiado} onChange={(e) => setC((v) => ({ ...v, vias_fiado: e.target.checked }))} /> Imprimir via da loja no fiado (com assinatura)</label>
+      <label className="flex items-center gap-2 text-[14px]"><input type="checkbox" checked={c.vias_fiado} onChange={(e) => setC((v) => ({ ...v, vias_fiado: e.target.checked }))} /> Imprimir via da loja no crediário (com assinatura)</label>
       <div className="grid grid-cols-2 gap-2">
-        <Campo rotulo="Máx. de parcelas no fiado" inputMode="numeric" value={String(c.fiado_max_parcelas)} onChange={(e) => setC((v) => ({ ...v, fiado_max_parcelas: Math.max(1, Math.min(12, parseInt(e.target.value || '1', 10))) }))} />
+        <Campo rotulo="Máx. de parcelas no crediário" inputMode="numeric" value={String(c.fiado_max_parcelas)} onChange={(e) => setC((v) => ({ ...v, fiado_max_parcelas: Math.max(1, Math.min(12, parseInt(e.target.value || '1', 10))) }))} />
         <Campo rotulo={`Teto do MEI ${ano} (R$)`} inputMode="decimal" value={c.teto_mei[ano] != null ? toInput(c.teto_mei[ano]) : ''}
           onChange={(e) => setC((v) => ({ ...v, teto_mei: { ...v.teto_mei, [ano]: parseBRL(e.target.value) } }))} />
       </div>

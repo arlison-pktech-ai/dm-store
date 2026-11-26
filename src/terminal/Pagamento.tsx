@@ -20,7 +20,7 @@ import { totais, useVendaAtual, venda } from './vendaAtual';
 type Opcao = 'restante' | 'comTaxa' | 'outro' | number;
 
 const ICONE: Record<FormaPagamento, NomeIcone> = { cartao: 'cartao', pix: 'pix', dinheiro: 'dinheiro', fiado: 'fiado', debito: 'cartao' };
-const DESTINO: Record<FormaPagamento, string> = { cartao: 'no cartão', pix: 'no PIX', dinheiro: 'em dinheiro', fiado: 'no fiado', debito: 'no débito' };
+const DESTINO: Record<FormaPagamento, string> = { cartao: 'no cartão', pix: 'no PIX', dinheiro: 'em dinheiro', fiado: 'no crediário', debito: 'no débito' };
 
 export default function Pagamento() {
   const v = useVendaAtual();
@@ -167,7 +167,7 @@ export default function Pagamento() {
             {formas.includes('fiado') && (
               <button type="button" disabled={quitado} onClick={() => escolherForma('fiado')}
                 className="flex h-[88px] items-center justify-center gap-3.5 rounded-[20px] border-[3px] border-dashed border-azul bg-white text-[28px] font-bold text-azul disabled:opacity-40">
-                <Icone nome="avancar" tamanho={32} traco={2.2} />Restante no fiado
+                <Icone nome="avancar" tamanho={32} traco={2.2} />Restante no crediário
               </button>
             )}
           </section>
