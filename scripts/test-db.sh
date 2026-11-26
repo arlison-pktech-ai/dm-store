@@ -11,7 +11,8 @@ psql -v ON_ERROR_STOP=1 -q -d "$DB" -f supabase/tests/00_supabase_stub.sql
 psql -v ON_ERROR_STOP=1 -q -d "$DB" -c "grant all on schema extensions to supa_owner; grant usage on schema auth to supa_owner; create extension if not exists pgcrypto with schema extensions;"
 for f in supabase/migrations/*.sql; do
   echo "migração: $f"
-  psql -v ON_ERROR_STOP=1 -q -d "$DB" -U supa_owner -f "$f"
+  # Roda como supa_owner sem precisar de senha (funciona por TCP no CI).
+  psql -v ON_ERROR_STOP=1 -q -d "$DB" -c "set role supa_owner" -f "$f"
 done
 for f in supabase/tests/[1-9]*.sql; do
   echo "teste: $f"
