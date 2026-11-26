@@ -222,6 +222,40 @@ begin
   raise notice 'RPCs do admin: OK';
 end $$;
 
+-- Crediário com prazo quinzenal e semanal (depois das contagens acima)
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000001","app_metadata":{"papel":"terminal"}}', false);
+do $$
+declare c uuid; p uuid; v jsonb;
+begin
+  c := (public.salvar_cliente('{"nome":"Cliente Prazo","telefone":"(92) 99000-0000"}')).id;
+  p := (public.salvar_produto('{"nome":"Produto Prazo","preco_venda":9000}')).id;
+  perform public.registrar_entrada(jsonb_build_array(jsonb_build_object('produto_id', p, 'quantidade', 5, 'custo_unitario', 1000)));
+  v := public.finalizar_venda(jsonb_build_object(
+    'idempotency_key', 'venda-prazo-q', 'cliente_id', c, 'desconto', 0, 'para_entrega', false,
+    'itens', jsonb_build_array(jsonb_build_object('produto_id', p, 'descricao', 'Produto Prazo', 'quantidade', 1, 'preco_unitario', 9000)),
+    'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'fiado', 'valor', 9000, 'parcelas', 3, 'primeiro_vencimento', '2026-12-10', 'prazo', 'quinzenal'))));
+  assert (v -> 'parcelas' -> 1 ->> 'vencimento') = '2026-12-25', 'quinzenal: +15 dias';
+  assert (v -> 'parcelas' -> 2 ->> 'vencimento') = '2027-01-09', 'quinzenal: +30 dias';
+  v := public.finalizar_venda(jsonb_build_object(
+    'idempotency_key', 'venda-prazo-s', 'cliente_id', c, 'desconto', 0, 'para_entrega', false,
+    'itens', jsonb_build_array(jsonb_build_object('produto_id', p, 'descricao', 'Produto Prazo', 'quantidade', 1, 'preco_unitario', 9000)),
+    'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'fiado', 'valor', 9000, 'parcelas', 2, 'primeiro_vencimento', '2026-12-03', 'prazo', 'semanal'))));
+  assert (v -> 'parcelas' -> 1 ->> 'vencimento') = '2026-12-10', 'semanal: +7 dias';
+  begin
+    perform public.finalizar_venda(jsonb_build_object(
+      'idempotency_key', 'venda-prazo-x', 'cliente_id', c, 'desconto', 0, 'para_entrega', false,
+      'itens', jsonb_build_array(jsonb_build_object('produto_id', p, 'descricao', 'Produto Prazo', 'quantidade', 1, 'preco_unitario', 9000)),
+      'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'fiado', 'valor', 9000, 'parcelas', 2, 'primeiro_vencimento', '2026-12-03', 'prazo', 'anual'))));
+    raise exception 'esperava erro';
+  exception when others then
+    if sqlerrm = 'esperava erro' then raise; end if;
+    assert sqlerrm like 'Prazo do crediário%', sqlerrm;
+  end;
+  raise notice 'Crediário com prazo: OK';
+end $$;
+reset role;
+
 -- Anônimo não executa nada
 reset role;
 set role anon;

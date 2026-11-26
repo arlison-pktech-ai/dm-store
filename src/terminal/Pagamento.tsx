@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { backend } from '../data';
-import type { FormaPagamento } from '../domain/types';
-import { NOME_FORMA } from '../domain/types';
+import type { FormaPagamento, PrazoCrediario } from '../domain/types';
+import { NOME_FORMA, PRAZOS_CREDIARIO } from '../domain/types';
 import { MAX_PAGAMENTOS, aplicarValor, dividirParcelas, valorComTaxa } from '../domain/regras';
 import { Icone, type NomeIcone } from '../components/Icone';
 import { Aviso, Botao, Cabecalho, Etapas, TecladoNumerico, aplicarTecla } from '../components/ui';
@@ -32,7 +32,14 @@ export default function Pagamento() {
   const [pedirPin, setPedirPin] = useState(false);
   const [outro, setOutro] = useState('');
   const [parcelas, setParcelas] = useState(1);
+  const [prazo, setPrazo] = useState<PrazoCrediario>('mensal');
   const [vencimento, setVencimento] = useState(() => addDias(hojeISO(), 30));
+  // Mensal ajusta o 1º vencimento de 7 em 7 dias; quinzenal e semanal, de 1 em 1.
+  const passoVenc = prazo === 'mensal' ? 7 : 1;
+  const escolherPrazo = (pz: PrazoCrediario) => {
+    setPrazo(pz);
+    setVencimento(addDias(hojeISO(), PRAZOS_CREDIARIO.find((x) => x.valor === pz)!.dias));
+  };
   const [erro, setErro] = useState('');
   const [concluindo, setConcluindo] = useState(false);
   const [feitaId, setFeitaId] = useState<string | null>(null);
@@ -74,7 +81,7 @@ export default function Pagamento() {
       ...(forma === 'dinheiro' ? { valor_recebido: Math.max(escolhido, aplicado) } : {}),
       ...(forma === 'cartao' && acrescimo > 0 ? { valor_recebido: aplicado + acrescimo } : {}),
       ...(temParcelas ? { parcelas } : {}),
-      ...(forma === 'fiado' ? { primeiro_vencimento: vencimento } : {}),
+      ...(forma === 'fiado' ? { primeiro_vencimento: vencimento, prazo } : {}),
     });
     somOk();
     // A próxima forma já vem com o novo valor que falta (RF-10).
@@ -126,11 +133,11 @@ export default function Pagamento() {
       ? [{ v: 'comTaxa', rotulo: `Com taxa ${brl(comTaxa)}` }, { v: 'restante', rotulo: 'Sem taxa' }, { v: 'outro', rotulo: 'Outro valor' }]
       : [{ v: opcao === 'comTaxa' ? 'comTaxa' : 'restante', rotulo: 'O que falta' }, { v: 'outro', rotulo: 'Outro valor' }];
 
-  const previaFiado = forma === 'fiado' && aplicado > 0 ? dividirParcelas(aplicado, parcelas, vencimento) : [];
+  const previaFiado = forma === 'fiado' && aplicado > 0 ? dividirParcelas(aplicado, parcelas, vencimento, prazo) : [];
 
   const detalhe = (p: (typeof v.pagamentos)[number]) => {
     if (p.forma === 'dinheiro') return `Recebido ${brl(p.valor_recebido ?? p.valor)}${(p.valor_recebido ?? 0) > p.valor ? ` · troco ${brl(p.valor_recebido! - p.valor)}` : ''}`;
-    if (p.forma === 'fiado') return `${p.parcelas} × ${brl(Math.floor(p.valor / p.parcelas!))} · 1º venc. ${diaMes(p.primeiro_vencimento!)}`;
+    if (p.forma === 'fiado') return `${p.parcelas} × ${brl(Math.floor(p.valor / p.parcelas!))} · ${PRAZOS_CREDIARIO.find((x) => x.valor === (p.prazo ?? 'mensal'))!.rotulo} · 1º venc. ${diaMes(p.primeiro_vencimento!)}`;
     if (p.forma === 'cartao') return `${p.parcelas}× na maquininha${(p.valor_recebido ?? 0) > p.valor ? ` · passou ${brl(p.valor_recebido!)} (taxa ${brl(p.valor_recebido! - p.valor)})` : ''}`;
     return 'Conferido na conta';
   };
@@ -196,22 +203,30 @@ export default function Pagamento() {
                 {forma !== 'dinheiro' && forma !== 'cartao' && opcao === 'outro' && escolhido > t.falta && <span className="text-[24px] font-bold text-vermelho">Limitado ao que falta: {brl(t.falta)}</span>}
                 {temParcelas && !quitado && (
                   <div className={`flex flex-col ${comTeclado ? 'gap-2' : 'gap-3'}`}>
+                    {forma === 'fiado' && (
+                      <div role="group" aria-label="Prazo" className={`grid grid-cols-3 ${comTeclado ? 'gap-2' : 'gap-3'}`}>
+                        {PRAZOS_CREDIARIO.map((pz) => (
+                          <button key={pz.valor} type="button" aria-pressed={prazo === pz.valor} onClick={() => escolherPrazo(pz.valor)}
+                            className={`rounded-2xl border-[3px] font-bold min-w-0 ${comTeclado ? 'h-[56px] px-1 text-[17px]' : 'h-[60px] text-[24px]'} ${prazo === pz.valor ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{pz.rotulo}</button>
+                        ))}
+                      </div>
+                    )}
                     <span className={`${comTeclado ? 'text-[22px]' : 'text-[26px]'} text-suave`}>{forma === 'cartao' ? 'Parcelas na maquininha' : 'Em quantas vezes?'}</span>
                     <div className={comTeclado ? 'grid grid-cols-4 gap-2' : forma === 'cartao' ? 'grid grid-cols-6 gap-3' : 'flex flex-wrap gap-3'}>
                       {Array.from({ length: maxParc }, (_, i) => i + 1).map((n) => (
                         <button key={n} type="button" onClick={() => setParcelas(n)}
-                          className={`rounded-2xl border-[3px] font-bold ${comTeclado ? 'h-[56px] min-w-0 text-[24px]' : forma === 'cartao' ? 'h-[64px] min-w-0 text-[28px]' : 'h-[76px] w-[112px] text-[30px]'} ${parcelas === n ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{n}×</button>
+                          className={`rounded-2xl border-[3px] font-bold ${comTeclado ? 'h-[56px] min-w-0 text-[24px]' : forma === 'cartao' ? 'h-[64px] min-w-0 text-[28px]' : 'h-[64px] w-[100px] text-[28px]'} ${parcelas === n ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{n}×</button>
                       ))}
                     </div>
                     {forma === 'fiado' && (
                       <div className={comTeclado ? 'grid grid-cols-2 items-center gap-2' : 'flex flex-wrap items-center gap-3'}>
                         <span className={comTeclado ? 'col-span-2 text-[22px]' : 'text-[26px]'}>1º vencimento <strong>{dataBR(vencimento)}</strong></span>
-                        <Botao variante="neutro" className={comTeclado ? '!min-h-[56px] !px-2 !text-[20px]' : '!min-h-[64px] !text-[22px]'} onClick={() => setVencimento((d) => addDias(d, -7))} disabled={vencimento <= addDias(hojeISO(), 7)}>− 7 dias</Botao>
-                        <Botao variante="neutro" className={comTeclado ? '!min-h-[56px] !px-2 !text-[20px]' : '!min-h-[64px] !text-[22px]'} onClick={() => setVencimento((d) => addDias(d, 7))}>+ 7 dias</Botao>
+                        <Botao variante="neutro" className={comTeclado ? '!min-h-[56px] !px-2 !text-[20px]' : '!min-h-[64px] !text-[22px]'} onClick={() => setVencimento((d) => addDias(d, -passoVenc))} disabled={vencimento <= addDias(hojeISO(), passoVenc)}>− {passoVenc === 1 ? '1 dia' : '7 dias'}</Botao>
+                        <Botao variante="neutro" className={comTeclado ? '!min-h-[56px] !px-2 !text-[20px]' : '!min-h-[64px] !text-[22px]'} onClick={() => setVencimento((d) => addDias(d, passoVenc))}>+ {passoVenc === 1 ? '1 dia' : '7 dias'}</Botao>
                       </div>
                     )}
                     {!(comTeclado && forma === 'cartao') && (
-                      <span className={`${comTeclado ? 'text-[22px]' : 'text-[26px]'} font-bold text-azul-escuro`}>
+                      <span className={`${comTeclado || forma === 'fiado' ? 'text-[22px]' : 'text-[26px]'} font-bold text-azul-escuro`}>
                         {forma === 'fiado'
                           ? previaFiado.map((p) => `${brl(p.valor)} em ${diaMes(p.vencimento)}`).join(' · ')
                           : `${parcelas}× na maquininha`}

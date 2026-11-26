@@ -22,7 +22,7 @@ export default function Vendas() {
       <h1 className="m-0 text-[22px]">Vendas</h1>
       <div className="flex gap-1.5">
         {[[0, 'Hoje'], [1, 'Ontem e hoje'], [6, '7 dias'], [29, '30 dias']].map(([d, n]) => (
-          <button key={d} type="button" onClick={() => setDias(d as number)} className={`h-11 flex-1 rounded-xl border-2 text-[13px] font-bold ${dias === d ? 'border-azul bg-azul-claro text-azul' : 'border-borda bg-white'}`}>{n}</button>
+          <button key={d} type="button" onClick={() => setDias(d as number)} className={`h-11 flex-1 rounded-xl border-2 px-3 text-[13px] font-bold md:flex-none md:px-6 ${dias === d ? 'border-azul bg-azul-claro text-azul' : 'border-borda bg-white'}`}>{n}</button>
         ))}
       </div>
       <span className="text-[14px] text-suave">{q.data?.length ?? 0} vendas desde {dataBR(desde)} · concluídas somam <strong className="text-tinta">{brl(total)}</strong></span>
@@ -64,7 +64,7 @@ function VendaCard({ v, aberta, onToggle }: { v: Venda; aberta: boolean; onToggl
         {v.status === 'cancelada'
           ? <span className="text-[13px] font-bold text-vermelho">Cancelada em {dataHoraBR(v.cancelada_em!)}: {v.motivo_cancelamento}</span>
           : <div className="flex gap-2">
-            <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo do cancelamento" className="min-h-11 flex-1 rounded-xl border-2 border-borda px-3 text-[15px]" />
+            <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo do cancelamento" className="min-h-11 min-w-0 flex-1 rounded-xl border-2 border-borda px-3 text-[15px]" />
             <B variante="perigo" onClick={cancelar}>Cancelar venda</B>
           </div>}
         <Erro>{erro}</Erro>

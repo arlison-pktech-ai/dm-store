@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react
 export function Card({ titulo, direita, children, className = '' }: { titulo?: ReactNode; direita?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={`flex flex-col gap-2.5 rounded-2xl border border-borda bg-white p-4 ${className}`}>
-      {(titulo || direita) && <div className="flex items-baseline justify-between gap-3"><span className="text-[15px] font-bold">{titulo}</span>{direita}</div>}
+      {(titulo || direita) && <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><span className="text-[15px] font-bold">{titulo}</span>{direita}</div>}
       {children}
     </section>
   );

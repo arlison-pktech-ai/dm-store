@@ -16,7 +16,9 @@ export default function Mais() {
   return (
     <>
       <h1 className="m-0 text-[22px]">Mais</h1>
+      <div className="grid items-start gap-3 md:gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <Configuracoes />
+      <div className="flex min-w-0 flex-col gap-3 md:gap-4">
       <TrocarPin />
       <Exportar />
       <AuditoriaCard />
@@ -30,6 +32,8 @@ export default function Mais() {
           </B>
         )}
       </Card>
+      </div>
+      </div>
     </>
   );
 }
@@ -79,7 +83,7 @@ function Configuracoes() {
           onChange={(e) => setC((v) => ({ ...v, teto_mei: { ...v.teto_mei, [ano]: parseBRL(e.target.value) } }))} />
       </div>
       <span className="text-[13px] font-bold text-suave">Taxas da maquininha (% por número de parcelas)</span>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">
         <Campo rotulo="Débito" inputMode="decimal" value={(c.taxa_debito / 100).toString().replace('.', ',')} onChange={(e) => setC((v) => ({ ...v, taxa_debito: Math.round(parseFloat(e.target.value.replace(',', '.') || '0') * 100) }))} />
         {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((n) => (
           <Campo key={n} rotulo={`${n}×`} inputMode="decimal" value={((c.taxas_cartao[n] ?? 0) / 100).toString().replace('.', ',')}
@@ -114,7 +118,7 @@ function TrocarPin() {
       <span className="text-[13px] text-suave">Pedido no terminal para cancelar venda, ajustar estoque, mudar preço e estornar recebimento.{backend.modo === 'demo' ? ' No modo demonstração, o PIN inicial é 1234.' : ''}</span>
       <div className="flex gap-2">
         <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" placeholder="Novo PIN (4 números)" type="password"
-          className="min-h-11 flex-1 rounded-xl border-2 border-borda px-3 text-[16px]" />
+          className="min-h-11 min-w-0 flex-1 rounded-xl border-2 border-borda px-3 text-[16px]" />
         <B variante="primario" disabled={pin.length !== 4} onClick={trocar}>Trocar</B>
       </div>
       <Erro>{erro}</Erro>

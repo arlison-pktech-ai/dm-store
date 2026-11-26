@@ -465,7 +465,7 @@ export class LocalBackend implements Backend {
         db.movimentos.push({ id: uid(), produto_id: i.produto_id, tipo: 'venda', quantidade: -i.quantidade, custo_unitario: null, origem_id: vendaId, motivo: null, criado_em: ts });
       }
       for (const pg of p.pagamentos.filter((x) => x.forma === 'fiado')) {
-        for (const parc of dividirParcelas(pg.valor, pg.parcelas!, pg.primeiro_vencimento!)) {
+        for (const parc of dividirParcelas(pg.valor, pg.parcelas!, pg.primeiro_vencimento!, pg.prazo ?? 'mensal')) {
           db.parcelas.push({ id: uid(), venda_id: vendaId, cliente_id: cli.id, numero: parc.numero, total_parcelas: pg.parcelas!, valor: parc.valor, valor_pago: 0, vencimento: parc.vencimento, status: 'aberta' });
         }
       }

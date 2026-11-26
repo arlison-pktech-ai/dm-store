@@ -22,6 +22,10 @@ describe('dividirParcelas (RF-14)', () => {
   it('ajusta o fim do mês', () => {
     expect(addMeses('2027-01-31', 1)).toBe('2027-02-28');
   });
+  it('prazo quinzenal e semanal', () => {
+    expect(dividirParcelas(9000, 3, '2026-12-10', 'quinzenal').map((x) => x.vencimento)).toEqual(['2026-12-10', '2026-12-25', '2027-01-09']);
+    expect(dividirParcelas(9000, 2, '2026-12-03', 'semanal').map((x) => x.vencimento)).toEqual(['2026-12-03', '2026-12-10']);
+  });
 });
 
 describe('aplicarValor (RF-12)', () => {

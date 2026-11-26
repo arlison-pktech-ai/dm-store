@@ -1,6 +1,12 @@
 import type { Centavos } from '../lib/money';
 
 export type FormaPagamento = 'cartao' | 'pix' | 'dinheiro' | 'fiado' | 'debito';
+export type PrazoCrediario = 'mensal' | 'quinzenal' | 'semanal';
+export const PRAZOS_CREDIARIO: { valor: PrazoCrediario; rotulo: string; dias: number }[] = [
+  { valor: 'mensal', rotulo: 'Mensal', dias: 30 },
+  { valor: 'quinzenal', rotulo: 'Quinzenal', dias: 15 },
+  { valor: 'semanal', rotulo: 'Semanal', dias: 7 },
+];
 export type FormaRecebimento = Exclude<FormaPagamento, 'fiado'>;
 
 export const NOME_FORMA: Record<FormaPagamento, string> = {
@@ -91,8 +97,10 @@ export interface PagamentoLancado {
   valor_recebido?: Centavos;
   /** Cartão: parcelas da maquininha. Fiado: número de parcelas. */
   parcelas?: number;
-  /** Fiado: primeiro vencimento YYYY-MM-DD */
+  /** Crediário: primeiro vencimento YYYY-MM-DD */
   primeiro_vencimento?: string;
+  /** Crediário: intervalo entre as parcelas (padrão mensal). */
+  prazo?: PrazoCrediario;
 }
 
 export interface FinalizarVendaPayload {

@@ -15,7 +15,7 @@ export default function ClientesAdmin() {
       <h1 className="m-0 text-[22px]">Clientes</h1>
       <div className="flex gap-1.5">
         {([['receber', 'A receber'], ['busca', 'Buscar / editar'], ['recebimentos', 'Recebimentos']] as const).map(([k, n]) => (
-          <button key={k} type="button" onClick={() => setAba(k)} className={`h-11 flex-1 rounded-xl border-2 text-[13px] font-bold ${aba === k ? 'border-azul bg-azul-claro text-azul' : 'border-borda bg-white'}`}>{n}</button>
+          <button key={k} type="button" onClick={() => setAba(k)} className={`h-11 flex-1 rounded-xl border-2 px-3 text-[13px] font-bold md:flex-none md:px-6 ${aba === k ? 'border-azul bg-azul-claro text-azul' : 'border-borda bg-white'}`}>{n}</button>
         ))}
       </div>
       {aba === 'receber' && <AReceber />}
@@ -53,7 +53,7 @@ function Busca() {
   return (
     <>
       <div className="flex gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome ou telefone" className="min-h-11 flex-1 rounded-xl border-2 border-borda px-3 text-[16px]" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome ou telefone" className="min-h-11 min-w-0 flex-1 rounded-xl border-2 border-borda px-3 text-[16px]" />
         <B variante="primario" onClick={() => setSel({ id: '', nome: '', telefone: '', endereco: null, bairro: null, referencia: null, observacoes: null, limite_credito: null, ativo: true })}>Nova</B>
       </div>
       <Card>
@@ -99,14 +99,16 @@ function Editar({ c, onFechar }: { c: Cliente; onFechar: () => void }) {
     }
   };
   return (
-    <Card titulo={c.id ? 'Editar cliente' : 'Nova cliente'} direita={<B onClick={onFechar}>Voltar</B>}>
-      <Campo rotulo="Nome" value={f.nome} onChange={set('nome')} />
-      <Campo rotulo="Telefone" value={f.telefone} onChange={set('telefone')} inputMode="tel" />
-      <Campo rotulo="Endereço" value={f.endereco ?? ''} onChange={set('endereco')} />
-      <Campo rotulo="Bairro" value={f.bairro ?? ''} onChange={set('bairro')} />
-      <Campo rotulo="Ponto de referência" value={f.referencia ?? ''} onChange={set('referencia')} />
-      <Campo rotulo="Observações" value={f.observacoes ?? ''} onChange={set('observacoes')} />
-      <Campo rotulo="Limite de crédito (R$, vazio = sem limite)" value={f.limite} onChange={set('limite')} inputMode="decimal" />
+    <Card titulo={c.id ? 'Editar cliente' : 'Nova cliente'} direita={<B onClick={onFechar}>Voltar</B>} className="lg:max-w-[880px]">
+      <div className="grid gap-2.5 md:grid-cols-2 md:gap-x-3">
+        <Campo rotulo="Nome" value={f.nome} onChange={set('nome')} />
+        <Campo rotulo="Telefone" value={f.telefone} onChange={set('telefone')} inputMode="tel" />
+        <Campo rotulo="Endereço" value={f.endereco ?? ''} onChange={set('endereco')} />
+        <Campo rotulo="Bairro" value={f.bairro ?? ''} onChange={set('bairro')} />
+        <Campo rotulo="Ponto de referência" value={f.referencia ?? ''} onChange={set('referencia')} />
+        <Campo rotulo="Observações" value={f.observacoes ?? ''} onChange={set('observacoes')} />
+        <Campo rotulo="Limite de crédito (R$, vazio = sem limite)" value={f.limite} onChange={set('limite')} inputMode="decimal" />
+      </div>
       <Erro>{erro}</Erro>
       <Ok>{ok}</Ok>
       <B variante="primario" onClick={salvar}>Salvar</B>
