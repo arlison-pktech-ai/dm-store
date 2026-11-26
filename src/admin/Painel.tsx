@@ -46,6 +46,7 @@ export default function Painel() {
           ))}
         </div>
         <span className="text-[13px] text-suave">Recebido do fiado no período: <strong className="text-tinta">{brl(p?.recebido_fiado ?? 0)}</strong></span>
+        {(p?.acrescimo_cartao ?? 0) > 0 && <span className="text-[13px] text-suave">Taxa do cartão repassada às clientes (fora do vendido): <strong className="text-tinta">{brl(p!.acrescimo_cartao!)}</strong></span>}
       </Card>
       <Card titulo={<span className="font-normal text-suave">A receber do fiado</span>} direita={<span className="text-[26px] font-bold">{brl(receber.data?.total_aberto ?? 0)}</span>}>
         <div className="grid grid-cols-3 gap-2">

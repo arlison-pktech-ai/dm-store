@@ -119,3 +119,138 @@ test('chegou mercadoria aceita quantidade com mais de um dígito (tela e teclado
   await page.getByRole('button', { name: /Pôr na lista/ }).click();
   await expect(page.getByText('105 un.', { exact: false })).toBeVisible();
 });
+
+test('estoque: contagem só ajusta depois de terminar e confirmar com PIN', async ({ page }) => {
+  await page.getByRole('link', { name: /Estoque/ }).click();
+  const ambar = page.getByTestId('linha-estoque').filter({ hasText: 'Essência Âmbar' });
+  await expect(ambar).toContainText('1 un.');
+  await page.getByRole('button', { name: /Contar estoque/ }).click();
+
+  await bipar(page, '7891000000017');
+  await bipar(page, '7891000000017');
+  await bipar(page, '7891000000017');
+  await bipar(page, '7891000000024');
+  const linhaAmbar = page.getByTestId('linha-contagem').filter({ hasText: 'Essência Âmbar' });
+  await expect(linhaAmbar.getByTestId('diferenca')).toHaveText('+2');
+  await page.getByTestId('linha-contagem').filter({ hasText: 'Flor de Lótus' }).getByRole('button', { name: 'Digitar quantidade' }).click();
+  await digitar(page, '12');
+  await page.getByRole('button', { name: /Usar esta quantidade/ }).click();
+
+  // Sair no meio não muda nada; a contagem continua guardada
+  await page.getByRole('link', { name: 'Estoque' }).click();
+  await expect(ambar).toContainText('1 un.');
+  await page.getByRole('button', { name: /Continuar contagem/ }).click();
+  await expect(linhaAmbar).toBeVisible();
+
+  await page.getByRole('button', { name: /Terminar contagem/ }).click();
+  await expect(page.getByText('de 1 para 3')).toBeVisible();
+  await expect(page.getByText('de 0 para 12')).toBeVisible();
+  await page.getByRole('button', { name: /Confirmar e ajustar/ }).click();
+  await digitar(page, '1234');
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await expect(page.getByText('Estoque ajustado: 2 produtos.')).toBeVisible();
+  await expect(ambar).toContainText('3 un.');
+  await expect(page.getByTestId('linha-estoque').filter({ hasText: 'Flor de Lótus' })).toContainText('12 un.');
+});
+
+test('estoque: dar entrada a partir da lista abre a quantidade do produto', async ({ page }) => {
+  await page.goto('/terminal/estoque');
+  await page.getByTestId('linha-estoque').filter({ hasText: 'Flor de Lótus' }).getByRole('button', { name: 'Dar entrada' }).click();
+  await expect(page.getByRole('dialog', { name: /Flor de Lótus/ })).toBeVisible();
+});
+
+test('cartão aceita valor maior (taxa repassada) sem mudar o total, e o teclado não cobre as parcelas', async ({ page }) => {
+  await page.getByRole('link', { name: /Vender/ }).click();
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await expect(page.getByText('R$ 129,90').first()).toBeVisible();
+  await page.getByRole('button', { name: /Ir para o pagamento/ }).click();
+
+  await page.getByRole('button', { name: 'Cartão', exact: true }).click();
+  await page.getByRole('button', { name: 'Outro valor' }).click();
+  await digitar(page, '136,40');
+  await expect(page.getByText('Passar na maquininha')).toContainText('R$ 136,40');
+  await expect(page.getByTestId('maquininha')).toContainText('taxa R$ 6,50'); await expect(page.getByTestId('maquininha')).toBeVisible();
+
+  // Parcelas e botão Lançar não se sobrepõem
+  const oito = await page.getByRole('button', { name: '8×', exact: true }).boundingBox();
+  const lancar = await page.getByRole('button', { name: /^Lançar R\$ 129,90 no cartão/ }).boundingBox();
+  expect(oito!.y + oito!.height).toBeLessThanOrEqual(lancar!.y);
+
+  await page.getByRole('button', { name: '3×', exact: true }).click();
+  await page.getByRole('button', { name: /^Lançar R\$ 129,90 no cartão/ }).click();
+  await expect(page.getByTestId('falta')).toHaveText('R$ 0,00');
+  await expect(page.getByText('passou R$ 136,40 (taxa R$ 6,50)')).toBeVisible();
+  await page.getByRole('button', { name: /Concluir e imprimir/ }).click();
+  await expect(page.getByRole('heading', { name: /concluída/ })).toBeVisible();
+});
+
+test('preços: muda vários e salva com PIN; nada muda antes de salvar', async ({ page }) => {
+  await page.goto('/terminal/estoque');
+  await page.getByRole('button', { name: 'Atualizar preços' }).click();
+  await bipar(page, '7891000000024');
+  await expect(page.getByRole('dialog', { name: /Novo preço · Flor de Lótus/ })).toBeVisible();
+  await digitar(page, '139,90');
+  await page.getByRole('button', { name: /Usar este preço/ }).click();
+  const lotus = page.getByTestId('linha-preco').filter({ hasText: 'Flor de Lótus' });
+  await expect(lotus).toContainText('R$ 139,90');
+  await page.getByRole('button', { name: /Salvar preços/ }).click();
+  await digitar(page, '1234');
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await expect(page.getByText('Preços salvos: 1.')).toBeVisible();
+
+  // A venda já usa o preço novo
+  await page.goto('/terminal/venda');
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await expect(page.getByText('R$ 139,90').first()).toBeVisible();
+});
+
+test('venda: corrigir o preço de um item com PIN vale só para esta venda', async ({ page }) => {
+  await page.goto('/terminal/venda');
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await page.getByRole('button', { name: /Corrigir preço de Flor de Lótus/ }).click();
+  await digitar(page, '119,90');
+  await page.getByRole('button', { name: /Continuar com o PIN/ }).click();
+  await digitar(page, '9999');
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await expect(page.getByText('PIN incorreto.')).toBeVisible();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await digitar(page, '1234');
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await expect(page.getByText('era R$ 129,90 cada')).toBeVisible();
+
+  await page.getByRole('button', { name: /Ir para o pagamento/ }).click();
+  await expect(page.getByTestId('falta')).toHaveText('R$ 119,90');
+  await page.getByRole('button', { name: 'PIX', exact: true }).click();
+  await page.getByRole('button', { name: /^Lançar R\$ 119,90 no PIX/ }).click();
+  await page.getByRole('button', { name: /Concluir e imprimir/ }).click();
+  await expect(page.getByRole('heading', { name: /concluída/ })).toBeVisible();
+
+  // O cadastro continua com o preço antigo
+  await page.goto('/terminal/precos');
+  await expect(page.getByTestId('linha-preco').filter({ hasText: 'Flor de Lótus' })).toContainText('R$ 129,90');
+});
+
+test('cartão já sugere o valor com a taxa da maquininha da parcela escolhida', async ({ page }) => {
+  await page.goto('/terminal/venda');
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await page.getByRole('button', { name: /Ir para o pagamento/ }).click();
+  await page.getByRole('button', { name: 'Cartão', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Com taxa R$ 134,60' })).toBeVisible();
+  await expect(page.getByTestId('maquininha')).toContainText('R$ 134,60');
+  await page.getByRole('button', { name: '3×', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Com taxa R$ 137,16' })).toBeVisible();
+  await page.getByRole('button', { name: /^Lançar R\$ 129,90 no cartão/ }).click();
+  await expect(page.getByText('passou R$ 137,16 (taxa R$ 7,26)')).toBeVisible();
+  // Sem a taxa continua possível
+  await page.getByRole('button', { name: 'Remover' }).click();
+  await page.getByRole('button', { name: 'Cartão', exact: true }).click();
+  await page.getByRole('button', { name: 'Sem taxa' }).click();
+  await expect(page.getByTestId('maquininha')).toHaveCount(0);
+});

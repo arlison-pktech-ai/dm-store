@@ -58,7 +58,7 @@ function VendaCard({ v, aberta, onToggle }: { v: Venda; aberta: boolean; onToggl
         {v.desconto > 0 && <Linha esq="Desconto" dir={`− ${brl(v.desconto)}`} />}
         {v.pagamentos.map((p, k) => (
           <Linha key={k} esq={NOME_FORMA[p.forma] + (p.parcelas_cartao ? ` ${p.parcelas_cartao}×` : '')} dir={brl(p.valor)}
-            sub={p.taxa ? `taxa ${brl(p.taxa)} · líquido ${brl(p.valor_liquido)}` : p.troco ? `recebido ${brl(p.valor_recebido ?? 0)} · troco ${brl(p.troco)}` : undefined} />
+            sub={p.taxa ? `${p.acrescimo ? `cobrado ${brl(p.valor_recebido ?? p.valor)} (taxa repassada ${brl(p.acrescimo)}) · ` : ''}taxa ${brl(p.taxa)} · líquido ${brl(p.valor_liquido)}` : p.troco ? `recebido ${brl(p.valor_recebido ?? 0)} · troco ${brl(p.troco)}` : undefined} />
         ))}
         {v.parcelas.length > 0 && <span className="text-[13px] text-suave">Parcelas: {v.parcelas.map((p) => `${brl(p.valor)} em ${dataBR(p.vencimento)}`).join(' · ')}</span>}
         {v.status === 'cancelada'

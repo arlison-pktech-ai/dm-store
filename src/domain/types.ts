@@ -78,6 +78,8 @@ export interface ItemCarrinho {
   detalhe: string;
   preco_unitario: Centavos;
   quantidade: number;
+  /** Preço do catálogo quando o preço foi corrigido na venda (com PIN). */
+  preco_original?: Centavos;
 }
 
 /** Pagamento lançado na tela de pagamento misto. */
@@ -85,7 +87,7 @@ export interface PagamentoLancado {
   id: string;
   forma: FormaPagamento;
   valor: Centavos;
-  /** Dinheiro: quanto ela entregou */
+  /** Dinheiro: quanto ela entregou. Cartão: quanto passou na maquininha (com a taxa repassada). */
   valor_recebido?: Centavos;
   /** Cartão: parcelas da maquininha. Fiado: número de parcelas. */
   parcelas?: number;
@@ -96,10 +98,12 @@ export interface PagamentoLancado {
 export interface FinalizarVendaPayload {
   idempotency_key: string;
   cliente_id: string;
-  itens: { produto_id: string; descricao: string; quantidade: number; preco_unitario: Centavos }[];
+  itens: { produto_id: string; descricao: string; quantidade: number; preco_unitario: Centavos; preco_original?: Centavos }[];
   desconto: Centavos;
   para_entrega: boolean;
   pagamentos: Omit<PagamentoLancado, 'id'>[];
+  /** PIN que autorizou preço corrigido em algum item. */
+  pin_preco?: string;
 }
 
 export interface VendaPagamento {
@@ -110,6 +114,8 @@ export interface VendaPagamento {
   valor_liquido: Centavos;
   valor_recebido: Centavos | null;
   troco: Centavos;
+  /** Cartão: taxa da maquininha repassada à cliente (cobrado na maquininha − valor). Não é venda. */
+  acrescimo?: Centavos;
 }
 
 export interface VendaItem {
@@ -176,6 +182,8 @@ export interface Painel {
   vendido: Centavos;
   por_forma: Record<FormaPagamento, Centavos>;
   recebido_fiado: Centavos;
+  /** Taxa da maquininha repassada às clientes no período */
+  acrescimo_cartao?: Centavos;
 }
 
 export interface Auditoria {

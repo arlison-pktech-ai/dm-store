@@ -6,11 +6,11 @@ import { diaExtenso, horaBR, saudacao } from '../lib/dates';
 import { useConfig } from './dados';
 import { backend } from '../data';
 
-function Opcao({ para, icone, titulo, sub, destaque }: { para: string; icone: NomeIcone; titulo: string; sub: string; destaque?: boolean }) {
+function Opcao({ para, icone, titulo, sub, destaque, className = '' }: { para: string; icone: NomeIcone; titulo: string; sub: string; destaque?: boolean; className?: string }) {
   return (
     <Link to={para}
-      className={`flex items-center gap-12 rounded-[28px] px-16 py-12 no-underline ${destaque ? 'bg-azul text-white' : 'border-[3px] border-borda bg-white text-tinta'}`}>
-      <span className={`flex size-[144px] shrink-0 items-center justify-center rounded-full ${destaque ? 'bg-white/15 text-white' : 'bg-azul-claro text-azul'}`}>
+      className={`flex min-h-0 items-center gap-12 rounded-[28px] px-16 no-underline ${className} ${destaque ? 'bg-azul text-white' : 'border-[3px] border-borda bg-white text-tinta'}`}>
+      <span className={`flex size-[128px] shrink-0 items-center justify-center rounded-full ${destaque ? 'bg-white/15 text-white' : 'bg-azul-claro text-azul'}`}>
         <Icone nome={icone} tamanho={80} traco={1.8} />
       </span>
       <span className="flex flex-col gap-2.5">
@@ -43,11 +43,12 @@ export default function Inicio() {
       </header>
       <main className="flex flex-1 flex-col gap-10 px-12 pb-12 pt-14">
         <h1 className="m-0 text-[52px] font-bold">{saudacao(agora)}! O que vamos fazer?</h1>
-        <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-8">
-          <Opcao para="/terminal/venda" icone="sacola" titulo="Vender" sub="Começa pela cliente" destaque />
+        <div className="grid flex-1 grid-cols-2 grid-rows-3 gap-7">
+          <Opcao para="/terminal/venda" icone="sacola" titulo="Vender" sub="Começa pela cliente" destaque className="col-span-2" />
           <Opcao para="/terminal/receber" icone="carteira" titulo="Receber fiado" sub="Quando a cliente paga uma parcela" />
           <Opcao para="/terminal/mercadoria" icone="caixa" titulo="Chegou mercadoria" sub="Dar entrada no estoque" />
           <Opcao para="/terminal/clientes" icone="pessoas" titulo="Clientes" sub="Buscar, cadastrar, ver o que deve" />
+          <Opcao para="/terminal/estoque" icone="grafico" titulo="Estoque" sub="Ver, contar e mudar preços" />
         </div>
       </main>
     </>

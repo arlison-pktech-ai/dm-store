@@ -6,7 +6,7 @@ Sistema web de vendas, estoque, clientes e fiado para a Dalva Cosméticos, feito
 
 | Área | Endereço | Quem usa |
 | --- | --- | --- |
-| Terminal | `/terminal` | Operadora: Vender, Receber fiado, Chegou mercadoria, Clientes |
+| Terminal | `/terminal` | Operadora: Vender, Receber fiado, Chegou mercadoria, Clientes, Estoque (ver, ajustar e contar) |
 | Administrador | `/admin` | Painel, vendas, clientes, estoque, configurações, exportação, auditoria |
 
 ## Rodar no computador (modo demonstração)

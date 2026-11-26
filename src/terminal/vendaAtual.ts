@@ -80,8 +80,22 @@ export const venda = {
   lancar: (p: Omit<PagamentoLancado, 'id'>) => set((v) => ({ ...v, pagamentos: [...v.pagamentos, { ...p, id: crypto.randomUUID() }] })),
   removerPagamento: (id: string) => set((v) => ({ ...v, pagamentos: v.pagamentos.filter((p) => p.id !== id) })),
   atualizarCliente: (c: Cliente) => set((v) => ({ ...v, cliente: c })),
-  descartar: () => set(() => nova()),
+  /** Preço corrigido com PIN: vale só para esta venda; guarda o preço original para a auditoria. */
+  corrigirPreco: (produtoId: string, preco: number, pin: string, catalogo: number) => {
+    pinPreco = pin;
+    // Igual ao preço do cadastro (ou o cadastro foi atualizado junto): não é mais correção.
+    set((v) => comHistorico(v, v.itens.map((x) => {
+      if (x.produto_id !== produtoId) return x;
+      return preco === catalogo ? { ...x, preco_unitario: preco, preco_original: undefined } : { ...x, preco_unitario: preco, preco_original: catalogo };
+    })));
+  },
+  /** PIN que autorizou as correções de preço; só na memória (não vai para o localStorage). */
+  pinPreco: () => pinPreco,
+  esquecerPinPreco: () => { pinPreco = null; },
+  descartar: () => { pinPreco = null; set(() => nova()); },
 };
+
+let pinPreco: string | null = null;
 
 export function totais(v: VendaAtual) {
   const subtotal = subtotalCarrinho(v.itens);

@@ -9,11 +9,12 @@ import { Aviso, Botao, Cabecalho, Etapas, Janela, TecladoNumerico, TecladoTexto,
 import { brl, parseBRL, toInput } from '../lib/money';
 import { somErro, somOk } from '../lib/som';
 import { useScanner } from '../lib/useScanner';
-import { BuscaCliente, CadastroRapidoProduto, EnderecoJanela } from './componentes';
+import { BuscaCliente, CadastroRapidoProduto, EnderecoJanela, PinJanela } from './componentes';
+import { ErroNegocio } from '../data/backend';
 import { useInvalidar, useProdutos } from './dados';
 import { totais, useVendaAtual, venda } from './vendaAtual';
 
-type JanelaAberta = null | { tipo: 'naoEncontrado'; codigo: string } | { tipo: 'procurar' } | { tipo: 'desconto' } | { tipo: 'endereco' } | { tipo: 'descartar' } | { tipo: 'semCodigo' };
+type JanelaAberta = null | { tipo: 'naoEncontrado'; codigo: string } | { tipo: 'procurar' } | { tipo: 'desconto' } | { tipo: 'endereco' } | { tipo: 'descartar' } | { tipo: 'semCodigo' } | { tipo: 'preco'; produtoId: string };
 
 export default function Venda() {
   const v = useVendaAtual();
@@ -82,6 +83,10 @@ export default function Venda() {
         <ProcurarProduto produtos={produtos} onFechar={() => setJanela(null)} onCadastrar={() => setJanela({ tipo: 'semCodigo' })}
           onEscolher={(p) => { setJanela(null); adicionar(p); }} />
       )}
+      {janela?.tipo === 'preco' && (() => {
+        const item = v.itens.find((i) => i.produto_id === janela.produtoId);
+        return item ? <CorrigirPreco item={item} onFechar={() => setJanela(null)} onFeito={() => { setJanela(null); invalidar('produtos'); mostrar('Preço corrigido.'); }} /> : null;
+      })()}
       {janela?.tipo === 'desconto' && <DescontoJanela subtotal={t.subtotal} atual={v.desconto} onFechar={() => setJanela(null)} onAplicar={(c) => { venda.desconto(c); setJanela(null); }} />}
       {janela?.tipo === 'endereco' && v.cliente && (
         <EnderecoJanela cliente={v.cliente} onFechar={() => setJanela(null)}
@@ -158,7 +163,13 @@ export default function Venda() {
                     <span className="min-w-14 text-center text-[40px] font-bold">{i.quantidade}</span>
                     <button type="button" aria-label="Aumentar" onClick={() => venda.mudarQtd(i.produto_id, 1)} className="size-[72px] rounded-2xl border-[3px] border-borda bg-white text-[40px] font-bold">+</button>
                   </span>
-                  <span className="text-right text-[32px] font-bold">{brl(i.preco_unitario * i.quantidade)}</span>
+                  <button type="button" aria-label={`Corrigir preço de ${i.descricao}`} onClick={() => setJanela({ tipo: 'preco', produtoId: i.produto_id })}
+                    className="flex flex-col items-end gap-1 border-none bg-transparent p-0 text-right">
+                    <span className="text-[32px] font-bold">{brl(i.preco_unitario * i.quantidade)}</span>
+                    <span className={`whitespace-nowrap text-[20px] font-bold underline ${i.preco_original != null ? 'text-vermelho' : 'text-azul'}`}>
+                      {i.preco_original != null ? `era ${brl(i.preco_original)} cada` : 'corrigir preço'}
+                    </span>
+                  </button>
                   <Botao variante="perigo" icone="lixo" className="!text-[22px]" onClick={() => venda.remover(i.produto_id)}>Remover</Botao>
                 </div>
               ))}
@@ -249,6 +260,45 @@ function DescontoJanela({ subtotal, atual, onAplicar, onFechar }: { subtotal: nu
         <TecladoNumerico onTecla={(t) => setTxt((v) => aplicarTecla(v, t, { numerico: true, max: 9 }))} className="h-[420px]" />
       </div>
       <Botao variante="concluir" grande icone="check" disabled={invalido} onClick={() => onAplicar(c)}>Aplicar desconto</Botao>
+    </Janela>
+  );
+}
+
+/** Corrigir o preço de um item na venda, com PIN. Pode salvar também como novo preço do produto. */
+function CorrigirPreco({ item, onFeito, onFechar }: { item: { produto_id: string; descricao: string; preco_unitario: number; preco_original?: number }; onFeito: () => void; onFechar: () => void }) {
+  const [txt, setTxt] = useState('');
+  const [salvarProduto, setSalvarProduto] = useState(false);
+  const [pin, setPin] = useState(false);
+  const novo = parseBRL(txt);
+  const catalogo = item.preco_original ?? item.preco_unitario;
+  if (pin) {
+    return (
+      <PinJanela titulo="Corrigir preço" onFechar={onFechar}
+        descricao={`${item.descricao}: de ${brl(item.preco_unitario)} para ${brl(novo)}${salvarProduto ? ', também no cadastro do produto' : ', só nesta venda'}.`}
+        onConfirmar={async (p) => {
+          if (salvarProduto) await backend.atualizarPrecos([{ produto_id: item.produto_id, preco_venda: novo }], p);
+          else if (!(await backend.conferirPin(p))) throw new ErroNegocio('PIN incorreto.');
+          venda.corrigirPreco(item.produto_id, novo, p, salvarProduto ? novo : catalogo);
+          onFeito();
+        }} />
+    );
+  }
+  return (
+    <Janela titulo={`Corrigir preço · ${item.descricao}`} onFechar={onFechar} largura={1100}>
+      <span className="text-[26px] text-suave">Preço do cadastro {brl(catalogo)}{item.preco_original != null ? ` · nesta venda ${brl(item.preco_unitario)}` : ''}</span>
+      <div className="grid grid-cols-2 gap-8">
+        <div className="flex flex-col gap-5">
+          <span className="text-[26px] font-bold">Novo preço de cada um</span>
+          <span className="text-[72px] font-bold" data-testid="novo-preco">{brl(novo)}</span>
+          <button type="button" onClick={() => setSalvarProduto((s) => !s)}
+            className={`flex min-h-[88px] items-center gap-4 rounded-2xl border-[3px] px-5 text-left text-[26px] font-bold ${salvarProduto ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>
+            <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg border-[3px] ${salvarProduto ? 'border-azul bg-azul text-white' : 'border-borda'}`}>{salvarProduto && <Icone nome="check" tamanho={26} traco={3} />}</span>
+            Salvar também como preço do produto
+          </button>
+        </div>
+        <TecladoNumerico onTecla={(t) => setTxt((v) => aplicarTecla(v, t, { numerico: true, max: 9 }))} className="h-[400px]" />
+      </div>
+      <Botao variante="primario" grande icone="cadeado" disabled={novo <= 0 || novo === item.preco_unitario} onClick={() => setPin(true)}>Continuar com o PIN</Botao>
     </Janela>
   );
 }

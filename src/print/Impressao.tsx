@@ -89,6 +89,7 @@ export function Cupom({ venda, cfg, reimpressao }: { venda: Venda; cfg: ConfigLo
             <div key={k}>
               <div style={S.linha}><span>{NOME_FORMA[p.forma]}{p.forma === 'cartao' && p.parcelas_cartao && p.parcelas_cartao > 1 ? ` ${p.parcelas_cartao}×` : ''}</span><span>{num(p.valor)}</span></div>
               {p.forma === 'dinheiro' && p.troco > 0 && <span style={{ fontSize: '12px' }}>recebido {num(p.valor_recebido ?? p.valor)} · troco {num(p.troco)}</span>}
+              {p.forma === 'cartao' && (p.acrescimo ?? 0) > 0 && <span style={{ fontSize: '12px' }}>na maquininha {num(p.valor_recebido ?? p.valor)} · taxa do cartão {num(p.acrescimo!)}</span>}
             </div>
           ))}
         </div>
