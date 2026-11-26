@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alocarRecebimento, aplicarValor, dividirParcelas, novoCustoMedio, taxaCartao, validarVenda } from './regras';
+import { alocarRecebimento, aplicarValor, valorComTaxa, dividirParcelas, novoCustoMedio, taxaCartao, validarVenda } from './regras';
 import { addMeses } from '../lib/dates';
 import { brl, parseBRL } from '../lib/money';
 
@@ -92,5 +92,20 @@ import { lerCSV } from '../lib/csv';
 describe('lerCSV', () => {
   it('lê ponto e vírgula, aspas e acentos no cabeçalho', () => {
     expect(lerCSV('Nome;Preço;Código de barras\n"Âmbar; 100 ml";189,90;789\n')).toEqual([{ nome: 'Âmbar; 100 ml', preco: '189,90', codigo_de_barras: '789' }]);
+  });
+});
+
+describe('valorComTaxa', () => {
+  const taxas = { '1': 349, '3': 529, '12': 1159 };
+  it('embute a taxa para a loja receber o valor cheio', () => {
+    for (const [v, p] of [[12990, 1], [25980, 3], [10000, 12], [1, 3], [99999, 12]] as const) {
+      const bruto = valorComTaxa(v, p, taxas);
+      expect(bruto - Math.round((bruto * taxas[String(p) as '1']) / 10000)).toBeGreaterThanOrEqual(v);
+      expect(bruto - 1 - Math.round(((bruto - 1) * taxas[String(p) as '1']) / 10000)).toBeLessThan(v);
+    }
+    expect(valorComTaxa(10000, 1, taxas)).toBe(10362);
+  });
+  it('sem taxa cadastrada, não muda o valor', () => {
+    expect(valorComTaxa(10000, 2, taxas)).toBe(10000);
   });
 });

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { backend } from '../data';
 import type { FormaPagamento } from '../domain/types';
 import { NOME_FORMA } from '../domain/types';
-import { MAX_PAGAMENTOS, aplicarValor, dividirParcelas } from '../domain/regras';
+import { MAX_PAGAMENTOS, aplicarValor, dividirParcelas, valorComTaxa } from '../domain/regras';
 import { Icone, type NomeIcone } from '../components/Icone';
 import { Aviso, Botao, Cabecalho, Etapas, TecladoNumerico, aplicarTecla } from '../components/ui';
 import { brl, parseBRL } from '../lib/money';
@@ -17,7 +17,7 @@ import { PinJanela } from './componentes';
 import { ErroNegocio } from '../data/backend';
 import { totais, useVendaAtual, venda } from './vendaAtual';
 
-type Opcao = 'restante' | 'outro' | number;
+type Opcao = 'restante' | 'comTaxa' | 'outro' | number;
 
 const ICONE: Record<FormaPagamento, NomeIcone> = { cartao: 'cartao', pix: 'pix', dinheiro: 'dinheiro', fiado: 'fiado', debito: 'cartao' };
 const DESTINO: Record<FormaPagamento, string> = { cartao: 'no cartão', pix: 'no PIX', dinheiro: 'em dinheiro', fiado: 'no fiado', debito: 'no débito' };
@@ -28,7 +28,7 @@ export default function Pagamento() {
   const qc = useQueryClient();
   const formas = (['cartao', 'pix', 'dinheiro', 'fiado', 'debito'] as FormaPagamento[]).filter((f) => cfg.formas_ativas.includes(f));
   const [forma, setForma] = useState<FormaPagamento>(formas[0] ?? 'pix');
-  const [opcao, setOpcao] = useState<Opcao>('restante');
+  const [opcao, setOpcao] = useState<Opcao>(() => ((formas[0] ?? 'pix') === 'cartao' ? 'comTaxa' : 'restante'));
   const [pedirPin, setPedirPin] = useState(false);
   const [outro, setOutro] = useState('');
   const [parcelas, setParcelas] = useState(1);
@@ -45,7 +45,9 @@ export default function Pagamento() {
   const t = totais(v);
   const quitado = t.falta === 0;
   const cheio = v.pagamentos.length >= MAX_PAGAMENTOS;
-  const escolhido = opcao === 'restante' ? t.falta : opcao === 'outro' ? parseBRL(outro) : opcao;
+  // Cartão "Com a taxa": o valor a passar na maquininha já embute a taxa das parcelas escolhidas.
+  const comTaxa = valorComTaxa(t.falta, parcelas, cfg.taxas_cartao);
+  const escolhido = opcao === 'restante' ? t.falta : opcao === 'comTaxa' ? comTaxa : opcao === 'outro' ? parseBRL(outro) : opcao;
   const { aplicado, troco, acrescimo } = aplicarValor(forma, escolhido, t.falta);
   const temParcelas = forma === 'cartao' || forma === 'fiado';
   const maxParc = forma === 'cartao' ? 12 : Math.max(1, cfg.fiado_max_parcelas);
@@ -54,7 +56,7 @@ export default function Pagamento() {
 
   const escolherForma = (f: FormaPagamento) => {
     setForma(f);
-    setOpcao('restante');
+    setOpcao(f === 'cartao' ? 'comTaxa' : 'restante');
     setOutro('');
     setParcelas(1);
     setErro('');
@@ -76,7 +78,7 @@ export default function Pagamento() {
     });
     somOk();
     // A próxima forma já vem com o novo valor que falta (RF-10).
-    setOpcao('restante');
+    setOpcao(forma === 'cartao' ? 'comTaxa' : 'restante');
     setOutro('');
     setParcelas(1);
   };
@@ -120,7 +122,9 @@ export default function Pagamento() {
 
   const chips: { v: Opcao; rotulo: string }[] = forma === 'dinheiro'
     ? [{ v: 'restante', rotulo: 'O que falta' }, { v: 2000, rotulo: 'R$ 20' }, { v: 5000, rotulo: 'R$ 50' }, { v: 10000, rotulo: 'R$ 100' }, { v: 'outro', rotulo: 'Outro valor' }]
-    : [{ v: 'restante', rotulo: 'O que falta' }, { v: 'outro', rotulo: 'Outro valor' }];
+    : forma === 'cartao' && comTaxa > t.falta
+      ? [{ v: 'comTaxa', rotulo: `Com taxa ${brl(comTaxa)}` }, { v: 'restante', rotulo: 'Sem taxa' }, { v: 'outro', rotulo: 'Outro valor' }]
+      : [{ v: opcao === 'comTaxa' ? 'comTaxa' : 'restante', rotulo: 'O que falta' }, { v: 'outro', rotulo: 'Outro valor' }];
 
   const previaFiado = forma === 'fiado' && aplicado > 0 ? dividirParcelas(aplicado, parcelas, vencimento) : [];
 
@@ -175,7 +179,7 @@ export default function Pagamento() {
                 const bloqueado = quitado || (typeof c.v === 'number' && forma !== 'dinheiro' && c.v > t.falta);
                 return (
                   <button key={String(c.v)} type="button" disabled={bloqueado} onClick={() => setOpcao(c.v)}
-                    className={`h-20 rounded-2xl border-[3px] px-5 text-[26px] font-bold disabled:opacity-40 ${opcao === c.v ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{c.rotulo}</button>
+                    className={`h-20 whitespace-nowrap rounded-2xl border-[3px] px-4 text-[24px] font-bold disabled:opacity-40 ${opcao === c.v ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{c.rotulo}</button>
                 );
               })}
             </div>
@@ -185,7 +189,7 @@ export default function Pagamento() {
                 {forma === 'dinheiro' && escolhido > 0 && <span className="text-[30px] text-suave">Ela entregou {brl(escolhido)} · <strong className="text-tinta">troco {brl(troco)}</strong></span>}
                 {forma === 'cartao' && acrescimo > 0 && (
                   <span className={`${comTeclado ? 'text-[22px]' : 'text-[26px]'} text-suave`} data-testid="maquininha">
-                    Passar na maquininha <strong className="text-tinta">{brl(escolhido)}</strong> · taxa repassada {brl(acrescimo)}
+                    Passar na maquininha <strong className="text-tinta">{brl(escolhido)}</strong> · taxa {brl(acrescimo)}
                   </span>
                 )}
                 {acrescimoAlto && <span className="text-[22px] font-bold text-vermelho">Taxa acima de 20% do valor. Confira o que foi digitado.</span>}
@@ -193,10 +197,10 @@ export default function Pagamento() {
                 {temParcelas && !quitado && (
                   <div className={`flex flex-col ${comTeclado ? 'gap-2' : 'gap-3'}`}>
                     <span className={`${comTeclado ? 'text-[22px]' : 'text-[26px]'} text-suave`}>{forma === 'cartao' ? 'Parcelas na maquininha' : 'Em quantas vezes?'}</span>
-                    <div className={comTeclado ? 'grid grid-cols-4 gap-2' : 'flex flex-wrap gap-3'}>
+                    <div className={comTeclado ? 'grid grid-cols-4 gap-2' : forma === 'cartao' ? 'grid grid-cols-6 gap-3' : 'flex flex-wrap gap-3'}>
                       {Array.from({ length: maxParc }, (_, i) => i + 1).map((n) => (
                         <button key={n} type="button" onClick={() => setParcelas(n)}
-                          className={`rounded-2xl border-[3px] font-bold ${comTeclado ? 'h-[56px] min-w-0 text-[24px]' : `h-[76px] text-[30px] ${forma === 'cartao' ? 'w-[88px]' : 'w-[112px]'}`} ${parcelas === n ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{n}×</button>
+                          className={`rounded-2xl border-[3px] font-bold ${comTeclado ? 'h-[56px] min-w-0 text-[24px]' : forma === 'cartao' ? 'h-[64px] min-w-0 text-[28px]' : 'h-[76px] w-[112px] text-[30px]'} ${parcelas === n ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{n}×</button>
                       ))}
                     </div>
                     {forma === 'fiado' && (

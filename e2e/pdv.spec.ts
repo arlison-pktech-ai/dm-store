@@ -170,7 +170,7 @@ test('cartão aceita valor maior (taxa repassada) sem mudar o total, e o teclado
   await page.getByRole('button', { name: 'Outro valor' }).click();
   await digitar(page, '136,40');
   await expect(page.getByText('Passar na maquininha')).toContainText('R$ 136,40');
-  await expect(page.getByText('taxa repassada R$ 6,50')).toBeVisible();
+  await expect(page.getByTestId('maquininha')).toContainText('taxa R$ 6,50'); await expect(page.getByTestId('maquininha')).toBeVisible();
 
   // Parcelas e botão Lançar não se sobrepõem
   const oito = await page.getByRole('button', { name: '8×', exact: true }).boundingBox();
@@ -234,4 +234,23 @@ test('venda: corrigir o preço de um item com PIN vale só para esta venda', asy
   // O cadastro continua com o preço antigo
   await page.goto('/terminal/precos');
   await expect(page.getByTestId('linha-preco').filter({ hasText: 'Flor de Lótus' })).toContainText('R$ 129,90');
+});
+
+test('cartão já sugere o valor com a taxa da maquininha da parcela escolhida', async ({ page }) => {
+  await page.goto('/terminal/venda');
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await page.getByRole('button', { name: /Ir para o pagamento/ }).click();
+  await page.getByRole('button', { name: 'Cartão', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Com taxa R$ 134,60' })).toBeVisible();
+  await expect(page.getByTestId('maquininha')).toContainText('R$ 134,60');
+  await page.getByRole('button', { name: '3×', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Com taxa R$ 137,16' })).toBeVisible();
+  await page.getByRole('button', { name: /^Lançar R\$ 129,90 no cartão/ }).click();
+  await expect(page.getByText('passou R$ 137,16 (taxa R$ 7,26)')).toBeVisible();
+  // Sem a taxa continua possível
+  await page.getByRole('button', { name: 'Remover' }).click();
+  await page.getByRole('button', { name: 'Cartão', exact: true }).click();
+  await page.getByRole('button', { name: 'Sem taxa' }).click();
+  await expect(page.getByTestId('maquininha')).toHaveCount(0);
 });

@@ -31,6 +31,20 @@ export function taxaCartao(valor: Centavos, parcelas: number, taxas: Record<stri
 }
 
 /**
+ * Quanto passar na maquininha para a loja receber `valor` líquido, com a taxa daquela
+ * quantidade de parcelas embutida (a cliente paga a taxa).
+ */
+export function valorComTaxa(valor: Centavos, parcelas: number, taxas: Record<string, number>): Centavos {
+  const bp = taxas[String(parcelas)] ?? 0;
+  if (bp <= 0 || bp >= 10000) return valor;
+  let bruto = Math.ceil((valor * 10000) / (10000 - bp));
+  // Arredondamento da taxa: garante que o líquido não fique abaixo do valor
+  while (bruto - taxaCartao(bruto, parcelas, taxas) < valor) bruto++;
+  while (bruto - 1 - taxaCartao(bruto - 1, parcelas, taxas) >= valor) bruto--;
+  return bruto;
+}
+
+/**
  * RF-10/RF-12: quanto de um valor escolhido entra como pagamento, e o troco.
  * Dinheiro acima do que falta gera troco. Cartão acima do que falta é a taxa da maquininha
  * repassada à cliente (acréscimo): passa na maquininha, mas não muda o total da venda.
