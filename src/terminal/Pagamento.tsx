@@ -43,7 +43,7 @@ export default function Pagamento() {
   const quitado = t.falta === 0;
   const cheio = v.pagamentos.length >= MAX_PAGAMENTOS;
   const escolhido = opcao === 'restante' ? t.falta : opcao === 'outro' ? parseBRL(outro) : opcao;
-  const { aplicado, troco } = aplicarValor(forma, escolhido, t.falta);
+  const { aplicado, troco, acrescimo } = aplicarValor(forma, escolhido, t.falta);
   const temParcelas = forma === 'cartao' || forma === 'fiado';
   const maxParc = forma === 'cartao' ? 12 : Math.max(1, cfg.fiado_max_parcelas);
   const fiadoNovo = v.pagamentos.filter((p) => p.forma === 'fiado').reduce((s, p) => s + p.valor, 0) + (forma === 'fiado' ? aplicado : 0);
@@ -59,14 +59,15 @@ export default function Pagamento() {
 
   const lancar = () => {
     setErro('');
-    if (quitado || cheio || aplicado <= 0) return;
-    if (forma !== 'dinheiro' && escolhido > t.falta) {
-      setErro(`Só o dinheiro aceita valor maior que o que falta (${brl(t.falta)}).`);
+    if (quitado || cheio || aplicado <= 0 || acrescimoAlto) return;
+    if (forma !== 'dinheiro' && forma !== 'cartao' && escolhido > t.falta) {
+      setErro(`Só dinheiro e cartão aceitam valor maior que o que falta (${brl(t.falta)}).`);
       return;
     }
     venda.lancar({
       forma, valor: aplicado,
       ...(forma === 'dinheiro' ? { valor_recebido: Math.max(escolhido, aplicado) } : {}),
+      ...(forma === 'cartao' && acrescimo > 0 ? { valor_recebido: aplicado + acrescimo } : {}),
       ...(temParcelas ? { parcelas } : {}),
       ...(forma === 'fiado' ? { primeiro_vencimento: vencimento } : {}),
     });
@@ -113,10 +114,14 @@ export default function Pagamento() {
   const detalhe = (p: (typeof v.pagamentos)[number]) => {
     if (p.forma === 'dinheiro') return `Recebido ${brl(p.valor_recebido ?? p.valor)}${(p.valor_recebido ?? 0) > p.valor ? ` · troco ${brl(p.valor_recebido! - p.valor)}` : ''}`;
     if (p.forma === 'fiado') return `${p.parcelas} × ${brl(Math.floor(p.valor / p.parcelas!))} · 1º venc. ${diaMes(p.primeiro_vencimento!)}`;
-    if (p.forma === 'cartao') return `${p.parcelas}× na maquininha`;
+    if (p.forma === 'cartao') return `${p.parcelas}× na maquininha${(p.valor_recebido ?? 0) > p.valor ? ` · passou ${brl(p.valor_recebido!)} (taxa ${brl(p.valor_recebido! - p.valor)})` : ''}`;
     return 'Conferido na conta';
   };
 
+  // Com o teclado aberto a coluna do valor fica estreita: valor menor e parcelas em grade de 4.
+  const comTeclado = opcao === 'outro' && !quitado;
+  // Proteção contra erro de digitação: taxa repassada acima de 20% do valor não é lançada.
+  const acrescimoAlto = forma === 'cartao' && acrescimo > Math.round(aplicado * 0.2);
   return (
     <>
       <Cabecalho voltar={{ para: '/terminal/venda', texto: 'Voltar ao carrinho' }} titulo="Nova venda" centro={<Etapas atual={3} />}
@@ -162,41 +167,49 @@ export default function Pagamento() {
               })}
             </div>
             <div className="flex min-h-0 flex-1 gap-5">
-              <div className="flex min-w-0 flex-1 flex-col gap-3">
-                <span className="text-[72px] font-bold leading-none" data-testid="valor-aplicado">{brl(aplicado)}</span>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto">
+                <span className={`whitespace-nowrap font-bold leading-none ${comTeclado ? 'text-[56px]' : 'text-[72px]'}`} data-testid="valor-aplicado">{brl(aplicado)}</span>
                 {forma === 'dinheiro' && escolhido > 0 && <span className="text-[30px] text-suave">Ela entregou {brl(escolhido)} · <strong className="text-tinta">troco {brl(troco)}</strong></span>}
-                {forma !== 'dinheiro' && opcao === 'outro' && escolhido > t.falta && <span className="text-[24px] font-bold text-vermelho">Limitado ao que falta: {brl(t.falta)}</span>}
+                {forma === 'cartao' && acrescimo > 0 && (
+                  <span className={`${comTeclado ? 'text-[22px]' : 'text-[26px]'} text-suave`} data-testid="maquininha">
+                    Passar na maquininha <strong className="text-tinta">{brl(escolhido)}</strong> · taxa repassada {brl(acrescimo)}
+                  </span>
+                )}
+                {acrescimoAlto && <span className="text-[22px] font-bold text-vermelho">Taxa acima de 20% do valor. Confira o que foi digitado.</span>}
+                {forma !== 'dinheiro' && forma !== 'cartao' && opcao === 'outro' && escolhido > t.falta && <span className="text-[24px] font-bold text-vermelho">Limitado ao que falta: {brl(t.falta)}</span>}
                 {temParcelas && !quitado && (
-                  <div className="flex flex-col gap-3">
-                    <span className="text-[26px] text-suave">{forma === 'cartao' ? 'Parcelas na maquininha' : 'Em quantas vezes?'}</span>
-                    <div className="flex flex-wrap gap-3">
+                  <div className={`flex flex-col ${comTeclado ? 'gap-2' : 'gap-3'}`}>
+                    <span className={`${comTeclado ? 'text-[22px]' : 'text-[26px]'} text-suave`}>{forma === 'cartao' ? 'Parcelas na maquininha' : 'Em quantas vezes?'}</span>
+                    <div className={comTeclado ? 'grid grid-cols-4 gap-2' : 'flex flex-wrap gap-3'}>
                       {Array.from({ length: maxParc }, (_, i) => i + 1).map((n) => (
                         <button key={n} type="button" onClick={() => setParcelas(n)}
-                          className={`h-[76px] rounded-2xl border-[3px] text-[30px] font-bold ${forma === 'cartao' ? 'w-[88px]' : 'w-[112px]'} ${parcelas === n ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{n}×</button>
+                          className={`rounded-2xl border-[3px] font-bold ${comTeclado ? 'h-[56px] min-w-0 text-[24px]' : `h-[76px] text-[30px] ${forma === 'cartao' ? 'w-[88px]' : 'w-[112px]'}`} ${parcelas === n ? 'border-azul bg-azul-claro' : 'border-borda bg-white'}`}>{n}×</button>
                       ))}
                     </div>
                     {forma === 'fiado' && (
-                      <div className="flex items-center gap-3">
-                        <span className="text-[26px]">1º vencimento <strong>{dataBR(vencimento)}</strong></span>
-                        <Botao variante="neutro" className="!min-h-[64px] !text-[22px]" onClick={() => setVencimento((d) => addDias(d, -7))} disabled={vencimento <= addDias(hojeISO(), 7)}>− 7 dias</Botao>
-                        <Botao variante="neutro" className="!min-h-[64px] !text-[22px]" onClick={() => setVencimento((d) => addDias(d, 7))}>+ 7 dias</Botao>
+                      <div className={comTeclado ? 'grid grid-cols-2 items-center gap-2' : 'flex flex-wrap items-center gap-3'}>
+                        <span className={comTeclado ? 'col-span-2 text-[22px]' : 'text-[26px]'}>1º vencimento <strong>{dataBR(vencimento)}</strong></span>
+                        <Botao variante="neutro" className={comTeclado ? '!min-h-[56px] !px-2 !text-[20px]' : '!min-h-[64px] !text-[22px]'} onClick={() => setVencimento((d) => addDias(d, -7))} disabled={vencimento <= addDias(hojeISO(), 7)}>− 7 dias</Botao>
+                        <Botao variante="neutro" className={comTeclado ? '!min-h-[56px] !px-2 !text-[20px]' : '!min-h-[64px] !text-[22px]'} onClick={() => setVencimento((d) => addDias(d, 7))}>+ 7 dias</Botao>
                       </div>
                     )}
-                    <span className="text-[26px] font-bold text-azul-escuro">
-                      {forma === 'fiado'
-                        ? previaFiado.map((p) => `${brl(p.valor)} em ${diaMes(p.vencimento)}`).join(' · ')
-                        : `${parcelas}× na maquininha`}
-                    </span>
+                    {!(comTeclado && forma === 'cartao') && (
+                      <span className={`${comTeclado ? 'text-[22px]' : 'text-[26px]'} font-bold text-azul-escuro`}>
+                        {forma === 'fiado'
+                          ? previaFiado.map((p) => `${brl(p.valor)} em ${diaMes(p.vencimento)}`).join(' · ')
+                          : `${parcelas}× na maquininha`}
+                      </span>
+                    )}
                     {forma === 'fiado' && passaLimite && <span className="text-[24px] font-bold text-vermelho">Atenção: passa do limite de crédito dela ({brl(v.cliente.limite_credito!)}).</span>}
                   </div>
                 )}
               </div>
-              {opcao === 'outro' && !quitado && (
-                <TecladoNumerico onTecla={(k) => setOutro((s) => aplicarTecla(s, k, { numerico: true, max: 9 }))} className="w-[330px]" />
+              {comTeclado && (
+                <TecladoNumerico onTecla={(k) => setOutro((s) => aplicarTecla(s, k, { numerico: true, max: 9 }))} className="w-[300px] shrink-0" />
               )}
             </div>
             {erro && <Aviso>{erro}</Aviso>}
-            <Botao variante="primario" disabled={quitado || cheio || aplicado <= 0} onClick={lancar} className="h-24 shrink-0 !text-[34px]">
+            <Botao variante="primario" disabled={quitado || cheio || aplicado <= 0 || acrescimoAlto} onClick={lancar} className="h-24 shrink-0 !text-[34px]">
               {quitado ? 'Nada falta lançar' : cheio ? 'Limite de 4 pagamentos' : `Lançar ${brl(aplicado)} ${DESTINO[forma]}`}
             </Botao>
           </section>

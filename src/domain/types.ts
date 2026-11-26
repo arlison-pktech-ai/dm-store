@@ -85,7 +85,7 @@ export interface PagamentoLancado {
   id: string;
   forma: FormaPagamento;
   valor: Centavos;
-  /** Dinheiro: quanto ela entregou */
+  /** Dinheiro: quanto ela entregou. Cartão: quanto passou na maquininha (com a taxa repassada). */
   valor_recebido?: Centavos;
   /** Cartão: parcelas da maquininha. Fiado: número de parcelas. */
   parcelas?: number;
@@ -110,6 +110,8 @@ export interface VendaPagamento {
   valor_liquido: Centavos;
   valor_recebido: Centavos | null;
   troco: Centavos;
+  /** Cartão: taxa da maquininha repassada à cliente (cobrado na maquininha − valor). Não é venda. */
+  acrescimo?: Centavos;
 }
 
 export interface VendaItem {
@@ -176,6 +178,8 @@ export interface Painel {
   vendido: Centavos;
   por_forma: Record<FormaPagamento, Centavos>;
   recebido_fiado: Centavos;
+  /** Taxa da maquininha repassada às clientes no período */
+  acrescimo_cartao?: Centavos;
 }
 
 export interface Auditoria {

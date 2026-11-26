@@ -26,8 +26,10 @@ describe('dividirParcelas (RF-14)', () => {
 
 describe('aplicarValor (RF-12)', () => {
   it('limita ao que falta, exceto dinheiro que gera troco', () => {
-    expect(aplicarValor('pix', 20000, 15000)).toEqual({ aplicado: 15000, troco: 0 });
-    expect(aplicarValor('dinheiro', 20000, 15000)).toEqual({ aplicado: 15000, troco: 5000 });
+    expect(aplicarValor('pix', 20000, 15000)).toEqual({ aplicado: 15000, troco: 0, acrescimo: 0 });
+    expect(aplicarValor('dinheiro', 20000, 15000)).toEqual({ aplicado: 15000, troco: 5000, acrescimo: 0 });
+    // Cartão acima do que falta: taxa repassada, não troco
+    expect(aplicarValor('cartao', 15525, 15000)).toEqual({ aplicado: 15000, troco: 0, acrescimo: 525 });
   });
 });
 

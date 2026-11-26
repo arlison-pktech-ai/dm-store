@@ -32,12 +32,13 @@ export function taxaCartao(valor: Centavos, parcelas: number, taxas: Record<stri
 
 /**
  * RF-10/RF-12: quanto de um valor escolhido entra como pagamento, e o troco.
- * Só o dinheiro aceita valor acima do que falta (gera troco).
+ * Dinheiro acima do que falta gera troco. Cartão acima do que falta é a taxa da maquininha
+ * repassada à cliente (acréscimo): passa na maquininha, mas não muda o total da venda.
  */
-export function aplicarValor(forma: FormaPagamento, escolhido: Centavos, falta: Centavos): { aplicado: Centavos; troco: Centavos } {
+export function aplicarValor(forma: FormaPagamento, escolhido: Centavos, falta: Centavos): { aplicado: Centavos; troco: Centavos; acrescimo: Centavos } {
   const aplicado = Math.max(0, Math.min(escolhido, falta));
-  const troco = forma === 'dinheiro' ? Math.max(0, escolhido - falta) : 0;
-  return { aplicado, troco };
+  const sobra = Math.max(0, escolhido - falta);
+  return { aplicado, troco: forma === 'dinheiro' ? sobra : 0, acrescimo: forma === 'cartao' ? sobra : 0 };
 }
 
 export interface Abatimento {
@@ -89,6 +90,7 @@ export function validarVenda(p: FinalizarVendaPayload): string | null {
   for (const x of p.pagamentos) {
     if (x.valor <= 0) return 'Pagamento com valor inválido.';
     if (x.forma === 'dinheiro' && (x.valor_recebido ?? x.valor) < x.valor) return 'Valor recebido em dinheiro menor que o pagamento.';
+    if (x.forma === 'cartao' && (x.valor_recebido ?? x.valor) < x.valor) return 'Valor cobrado no cartão menor que o pagamento.';
     if (x.forma === 'cartao' && (!x.parcelas || x.parcelas < 1 || x.parcelas > 12)) return 'Parcelas do cartão entre 1 e 12.';
     if (x.forma === 'fiado' && (!x.parcelas || x.parcelas < 1 || !x.primeiro_vencimento)) return 'Informe as parcelas do fiado.';
   }

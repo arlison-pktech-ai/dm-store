@@ -56,8 +56,27 @@ begin
   v2 := public.finalizar_venda(jsonb_build_object(
     'idempotency_key', 'venda-teste-0002', 'cliente_id', c, 'desconto', 990, 'para_entrega', false,
     'itens', jsonb_build_array(jsonb_build_object('produto_id', pb, 'descricao', 'Flor de Lótus', 'quantidade', 1, 'preco_unitario', 12990)),
-    'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'cartao', 'valor', 12000, 'parcelas', 3))));
-  assert (v2 -> 'pagamentos' -> 0 ->> 'taxa')::int = round(12000 * 529 / 10000.0), 'taxa do cartão 3x';
+    -- passou 126,36 na maquininha: 6,36 de taxa repassada à cliente
+    'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'cartao', 'valor', 12000, 'parcelas', 3, 'valor_recebido', 12636))));
+  assert (v2 ->> 'total')::int = 12000, 'taxa repassada não entra no total da venda';
+  assert (v2 -> 'pagamentos' -> 0 ->> 'acrescimo')::int = 636, 'acréscimo do cartão';
+  assert (v2 -> 'pagamentos' -> 0 ->> 'troco')::int = 0, 'cartão não dá troco';
+  assert (v2 -> 'pagamentos' -> 0 ->> 'taxa')::int = round(12636 * 529 / 10000.0), 'taxa do cartão 3x sobre o cobrado';
+  assert (v2 -> 'pagamentos' -> 0 ->> 'valor_liquido')::int = 12636 - round(12636 * 529 / 10000.0), 'líquido sobre o cobrado';
+  begin
+    perform public.finalizar_venda(jsonb_build_object(
+      'idempotency_key', 'venda-teste-0003', 'cliente_id', c, 'desconto', 0, 'para_entrega', false,
+      'itens', jsonb_build_array(jsonb_build_object('produto_id', pb, 'quantidade', 1, 'preco_unitario', 1000)),
+      'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'pix', 'valor', 1000, 'valor_recebido', 0))));
+    perform public.finalizar_venda(jsonb_build_object(
+      'idempotency_key', 'venda-teste-0004', 'cliente_id', c, 'desconto', 0, 'para_entrega', false,
+      'itens', jsonb_build_array(jsonb_build_object('produto_id', pb, 'quantidade', 1, 'preco_unitario', 1000)),
+      'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'cartao', 'valor', 1000, 'valor_recebido', 900))));
+    raise exception 'esperava erro';
+  exception when others then
+    if sqlerrm = 'esperava erro' then raise; end if;
+    assert sqlerrm like 'Valor cobrado no cartão menor%', sqlerrm;
+  end;
   assert (select estoque_atual from public.produtos where id = pb) = -1, 'estoque pode ficar negativo';
 
   -- Recebimento parcial: 13000 abate 10000 da 1ª e 3000 da 2ª
@@ -162,6 +181,9 @@ begin
   assert (select count(*) from public.auditoria where ator = 'terminal' and acao = 'cancelar_venda') = 1, 'ator terminal';
   assert (select count(*) from public.auditoria where acao = 'contagem_estoque') = 2, 'contagem auditada';
   assert (public.painel(public.hoje_loja(), public.hoje_loja()) ->> 'vendas_qtd')::int = 1, 'painel conta só concluídas';
+  assert (select sum(valor_bruto) from public.recebiveis_cartao) = 12636, 'recebíveis sobre o cobrado';
+  assert (public.painel(public.hoje_loja(), public.hoje_loja()) ->> 'acrescimo_cartao')::int = 636, 'painel mostra a taxa repassada';
+  assert (public.painel(public.hoje_loja(), public.hoje_loja()) ->> 'vendido')::int = 12000, 'vendido sem a taxa repassada';
   perform public.trocar_pin('4321');
   perform public.ajustar_estoque((select id from public.produtos limit 1), 1, 'contagem');  -- admin sem PIN
   raise notice 'RPCs do admin: OK';

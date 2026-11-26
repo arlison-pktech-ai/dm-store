@@ -158,3 +158,29 @@ test('estoque: dar entrada a partir da lista abre a quantidade do produto', asyn
   await page.getByTestId('linha-estoque').filter({ hasText: 'Flor de Lótus' }).getByRole('button', { name: 'Dar entrada' }).click();
   await expect(page.getByRole('dialog', { name: /Flor de Lótus/ })).toBeVisible();
 });
+
+test('cartão aceita valor maior (taxa repassada) sem mudar o total, e o teclado não cobre as parcelas', async ({ page }) => {
+  await page.getByRole('link', { name: /Vender/ }).click();
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await expect(page.getByText('R$ 129,90').first()).toBeVisible();
+  await page.getByRole('button', { name: /Ir para o pagamento/ }).click();
+
+  await page.getByRole('button', { name: 'Cartão', exact: true }).click();
+  await page.getByRole('button', { name: 'Outro valor' }).click();
+  await digitar(page, '136,40');
+  await expect(page.getByText('Passar na maquininha')).toContainText('R$ 136,40');
+  await expect(page.getByText('taxa repassada R$ 6,50')).toBeVisible();
+
+  // Parcelas e botão Lançar não se sobrepõem
+  const oito = await page.getByRole('button', { name: '8×', exact: true }).boundingBox();
+  const lancar = await page.getByRole('button', { name: /^Lançar R\$ 129,90 no cartão/ }).boundingBox();
+  expect(oito!.y + oito!.height).toBeLessThanOrEqual(lancar!.y);
+
+  await page.getByRole('button', { name: '3×', exact: true }).click();
+  await page.getByRole('button', { name: /^Lançar R\$ 129,90 no cartão/ }).click();
+  await expect(page.getByTestId('falta')).toHaveText('R$ 0,00');
+  await expect(page.getByText('passou R$ 136,40 (taxa R$ 6,50)')).toBeVisible();
+  await page.getByRole('button', { name: /Concluir e imprimir/ }).click();
+  await expect(page.getByRole('heading', { name: /concluída/ })).toBeVisible();
+});

@@ -421,12 +421,15 @@ export class LocalBackend implements Backend {
           return { ...i, custo_unitario: prod?.custo_medio ?? 0 };
         }),
         pagamentos: p.pagamentos.map((pg) => {
-          const taxa = pg.forma === 'cartao' ? taxaCartao(pg.valor, pg.parcelas ?? 1, db.config.taxas_cartao)
+          // Cartão: taxa e líquido sobre o que passou na maquininha (com a taxa repassada).
+          const cobrado = pg.forma === 'cartao' ? Math.max(pg.valor, pg.valor_recebido ?? pg.valor) : pg.valor;
+          const taxa = pg.forma === 'cartao' ? taxaCartao(cobrado, pg.parcelas ?? 1, db.config.taxas_cartao)
             : pg.forma === 'debito' ? Math.round((pg.valor * db.config.taxa_debito) / 10000) : 0;
           return {
-            forma: pg.forma, valor: pg.valor, parcelas_cartao: pg.forma === 'cartao' ? pg.parcelas ?? 1 : null, taxa, valor_liquido: pg.valor - taxa,
-            valor_recebido: pg.forma === 'dinheiro' ? pg.valor_recebido ?? pg.valor : null,
+            forma: pg.forma, valor: pg.valor, parcelas_cartao: pg.forma === 'cartao' ? pg.parcelas ?? 1 : null, taxa, valor_liquido: cobrado - taxa,
+            valor_recebido: pg.forma === 'dinheiro' ? pg.valor_recebido ?? pg.valor : pg.forma === 'cartao' ? cobrado : null,
             troco: pg.forma === 'dinheiro' ? Math.max(0, (pg.valor_recebido ?? pg.valor) - pg.valor) : 0,
+            acrescimo: cobrado - pg.valor,
           };
         }),
       };
@@ -597,7 +600,8 @@ export class LocalBackend implements Backend {
       const por_forma = { cartao: 0, pix: 0, dinheiro: 0, fiado: 0, debito: 0 };
       vs.forEach((v) => v.pagamentos.forEach((p) => (por_forma[p.forma] += p.valor)));
       const recebido_fiado = db.recebimentos.filter((r) => !r.estornado && diaLocal(r.recebido_em) >= desde && diaLocal(r.recebido_em) <= ate).reduce((s, r) => s + r.valor, 0);
-      return { vendas_qtd: vs.length, vendido: vs.reduce((s, v) => s + v.total, 0), por_forma, recebido_fiado };
+      const acrescimo_cartao = vs.reduce((s, v) => s + v.pagamentos.reduce((t, p) => t + (p.acrescimo ?? 0), 0), 0);
+      return { vendas_qtd: vs.length, vendido: vs.reduce((s, v) => s + v.total, 0), por_forma, recebido_fiado, acrescimo_cartao };
     });
   }
 
