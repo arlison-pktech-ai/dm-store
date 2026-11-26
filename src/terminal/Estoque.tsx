@@ -14,7 +14,7 @@ import { descricaoProduto, detalheProduto } from './vendaAtual';
 const baixo = (p: Produto) => p.estoque_atual <= p.estoque_minimo;
 
 /** Procura de produto pelo nome, com o teclado na tela. */
-function ProcurarJanela({ titulo, valor, produtos, onEscolher, onFechar }: {
+export function ProcurarJanela({ titulo, valor, produtos, onEscolher, onFechar }: {
   titulo: string; valor?: string; produtos: Produto[]; onEscolher?: (p: Produto) => void; onFechar: (q: string) => void;
 }) {
   const [q, setQ] = useState(valor ?? '');
@@ -122,6 +122,7 @@ export default function Estoque() {
             {contagemAberta ? 'Continuar contagem' : 'Contar estoque'}
           </Botao>
           <Botao variante="primario" icone="caixa" onClick={() => nav('/terminal/mercadoria')}>Chegou mercadoria</Botao>
+          <Botao variante="contorno" icone="dinheiro" onClick={() => nav('/terminal/precos')}>Atualizar preços</Botao>
         </aside>
       </main>
       {procurar && <ProcurarJanela titulo="Procurar produto" valor={q} produtos={produtos} onFechar={(v) => { setQ(v); setDestaque(null); setProcurar(false); }} />}

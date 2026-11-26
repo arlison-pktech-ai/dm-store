@@ -78,6 +78,8 @@ export interface ItemCarrinho {
   detalhe: string;
   preco_unitario: Centavos;
   quantidade: number;
+  /** Preço do catálogo quando o preço foi corrigido na venda (com PIN). */
+  preco_original?: Centavos;
 }
 
 /** Pagamento lançado na tela de pagamento misto. */
@@ -96,10 +98,12 @@ export interface PagamentoLancado {
 export interface FinalizarVendaPayload {
   idempotency_key: string;
   cliente_id: string;
-  itens: { produto_id: string; descricao: string; quantidade: number; preco_unitario: Centavos }[];
+  itens: { produto_id: string; descricao: string; quantidade: number; preco_unitario: Centavos; preco_original?: Centavos }[];
   desconto: Centavos;
   para_entrega: boolean;
   pagamentos: Omit<PagamentoLancado, 'id'>[];
+  /** PIN que autorizou preço corrigido em algum item. */
+  pin_preco?: string;
 }
 
 export interface VendaPagamento {

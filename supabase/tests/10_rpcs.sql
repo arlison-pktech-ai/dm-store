@@ -135,6 +135,37 @@ begin
   assert (select estoque_atual from public.produtos where id = pa) = 3, 'contagem sem PIN não muda';
   assert public.registrar_contagem(jsonb_build_array(jsonb_build_object('produto_id', pa, 'contado', 7)), '1234') = 1, 'contagem ajusta 1';
   assert (select estoque_atual from public.produtos where id = pa) = 7, 'contagem fixa o contado';
+
+  -- Tela de preços: sem PIN é recusada; com PIN muda só o que é diferente
+  begin
+    perform public.atualizar_precos(jsonb_build_array(jsonb_build_object('produto_id', pa, 'preco_venda', 9990)), '0000');
+    raise exception 'esperava erro';
+  exception when others then
+    if sqlerrm = 'esperava erro' then raise; end if;
+  end;
+  assert public.atualizar_precos(jsonb_build_array(
+    jsonb_build_object('produto_id', pa, 'preco_venda', 9990),
+    jsonb_build_object('produto_id', pb, 'preco_venda', (select preco_venda from public.produtos where id = pb))), '1234') = 1, 'atualiza 1 preço';
+  assert (select preco_venda from public.produtos where id = pa) = 9990, 'preço novo';
+
+  -- Preço corrigido na venda: sem PIN é recusado; com PIN vende pelo preço corrigido e o cadastro não muda
+  begin
+    perform public.finalizar_venda(jsonb_build_object(
+      'idempotency_key', 'venda-teste-preco-1', 'cliente_id', c, 'desconto', 0, 'para_entrega', false,
+      'itens', jsonb_build_array(jsonb_build_object('produto_id', pa, 'descricao', 'Essência Âmbar', 'quantidade', 1, 'preco_unitario', 8000, 'preco_original', 9990)),
+      'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'pix', 'valor', 8000))));
+    raise exception 'esperava erro';
+  exception when others then
+    if sqlerrm = 'esperava erro' then raise; end if;
+    assert sqlerrm like 'PIN incorreto%', sqlerrm;
+  end;
+  v2 := public.finalizar_venda(jsonb_build_object(
+    'idempotency_key', 'venda-teste-preco-2', 'cliente_id', c, 'desconto', 0, 'para_entrega', false, 'pin_preco', '1234',
+    'itens', jsonb_build_array(jsonb_build_object('produto_id', pa, 'descricao', 'Essência Âmbar', 'quantidade', 1, 'preco_unitario', 8000, 'preco_original', 9990)),
+    'pagamentos', jsonb_build_array(jsonb_build_object('forma', 'pix', 'valor', 8000))));
+  assert (v2 ->> 'total')::int = 8000, 'vendeu pelo preço corrigido';
+  assert (select preco_venda from public.produtos where id = pa) = 9990, 'cadastro não muda';
+  perform public.cancelar_venda((v2 ->> 'id')::uuid, 'teste', '1234');
   assert public.registrar_contagem(jsonb_build_array(jsonb_build_object('produto_id', pa, 'contado', 7)), '1234') = 0, 'contagem igual não gera movimento';
 
   -- Alterar preço sem PIN é recusado
@@ -178,8 +209,10 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 do $$
 begin
   assert (select count(*) from public.auditoria) >= 3, 'auditoria registrada';
-  assert (select count(*) from public.auditoria where ator = 'terminal' and acao = 'cancelar_venda') = 1, 'ator terminal';
+  assert (select count(*) from public.auditoria where ator = 'terminal' and acao = 'cancelar_venda') = 2, 'ator terminal';
   assert (select count(*) from public.auditoria where acao = 'contagem_estoque') = 2, 'contagem auditada';
+  assert (select count(*) from public.auditoria where acao = 'alterar_preco') >= 1, 'preço auditado';
+  assert (select count(*) from public.auditoria where acao = 'preco_corrigido_venda') = 1, 'correção na venda auditada';
   assert (public.painel(public.hoje_loja(), public.hoje_loja()) ->> 'vendas_qtd')::int = 1, 'painel conta só concluídas';
   assert (select sum(valor_bruto) from public.recebiveis_cartao) = 12636, 'recebíveis sobre o cobrado';
   assert (public.painel(public.hoje_loja(), public.hoje_loja()) ->> 'acrescimo_cartao')::int = 636, 'painel mostra a taxa repassada';

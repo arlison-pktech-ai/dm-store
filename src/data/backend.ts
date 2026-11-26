@@ -72,6 +72,8 @@ export interface Backend {
   registrarEntrada(itens: ItemEntrada[]): Promise<void>;
   ajustarEstoque(produtoId: string, quantidade: number, motivo: string, pin?: string): Promise<void>;
   /** Contagem: cada produto passa a ter a quantidade contada. Devolve quantos mudaram. */
+  /** Tela de preços: salva vários preços com PIN. Devolve quantos mudaram. */
+  atualizarPrecos(itens: { produto_id: string; preco_venda: number }[], pin?: string): Promise<number>;
   registrarContagem(itens: { produto_id: string; contado: number }[], pin?: string): Promise<number>;
   importarProdutos(linhas: NovoProduto[]): Promise<number>;
 

@@ -276,6 +276,25 @@ export class LocalBackend implements Backend {
     });
   }
 
+  async atualizarPrecos(itens: { produto_id: string; preco_venda: number }[], pin?: string) {
+    const ator = await this.ator();
+    return this.tx(async (db) => {
+      await this.exigirPin(db, pin);
+      if (!itens.length) throw new ErroNegocio('Nenhum preço para salvar.');
+      let n = 0;
+      for (const i of itens) {
+        if (!Number.isInteger(i.preco_venda) || i.preco_venda <= 0) throw new ErroNegocio('Preço inválido.');
+        const p = db.produtos.find((x) => x.id === i.produto_id);
+        if (!p) throw new ErroNegocio('Produto não encontrado.');
+        if (p.preco_venda === i.preco_venda) continue;
+        this.audit(db, ator, 'alterar_preco', 'produtos', p.id, { de: p.preco_venda, para: i.preco_venda });
+        p.preco_venda = i.preco_venda;
+        n++;
+      }
+      return n;
+    });
+  }
+
   async registrarContagem(itens: { produto_id: string; contado: number }[], pin?: string) {
     const ator = await this.ator();
     return this.tx(async (db) => {
@@ -402,11 +421,15 @@ export class LocalBackend implements Backend {
 
   // ---------- Vendas
   async finalizarVenda(p: FinalizarVendaPayload): Promise<Venda> {
-    return this.tx((db) => {
+    const ator = await this.ator();
+    return this.tx(async (db) => {
       const existente = db.vendas.find((v) => v.idempotency_key === p.idempotency_key);
       if (existente) return this.montarVenda(db, existente);
       const erro = validarVenda(p);
       if (erro) throw new ErroNegocio(erro);
+      // Preço corrigido na venda exige PIN e fica na auditoria (o catálogo não muda).
+      const corrigidos = p.itens.filter((i) => i.preco_original != null && i.preco_original !== i.preco_unitario);
+      if (corrigidos.length) await this.exigirPin(db, p.pin_preco);
       const cli = db.clientes.find((c) => c.id === p.cliente_id);
       if (!cli) throw new ErroNegocio('Cliente não encontrada.');
       const subtotal = subtotalCarrinho(p.itens);
@@ -416,7 +439,7 @@ export class LocalBackend implements Backend {
       const venda: VendaRow = {
         id: vendaId, numero: db.seq_venda, cliente_id: cli.id, status: 'concluida', subtotal, desconto: p.desconto, total: subtotal - p.desconto,
         para_entrega: p.para_entrega, criada_em: ts, cancelada_em: null, motivo_cancelamento: null, idempotency_key: p.idempotency_key,
-        itens: p.itens.map((i) => {
+        itens: p.itens.map(({ preco_original: _po, ...i }) => {
           const prod = db.produtos.find((x) => x.id === i.produto_id);
           return { ...i, custo_unitario: prod?.custo_medio ?? 0 };
         }),
@@ -434,6 +457,10 @@ export class LocalBackend implements Backend {
         }),
       };
       db.vendas.push(venda);
+      if (corrigidos.length) {
+        this.audit(db, ator, 'preco_corrigido_venda', 'vendas', vendaId,
+          { itens: corrigidos.map((i) => ({ produto_id: i.produto_id, descricao: i.descricao, de: i.preco_original, para: i.preco_unitario, quantidade: i.quantidade })) });
+      }
       for (const i of p.itens) {
         db.movimentos.push({ id: uid(), produto_id: i.produto_id, tipo: 'venda', quantidade: -i.quantidade, custo_unitario: null, origem_id: vendaId, motivo: null, criado_em: ts });
       }

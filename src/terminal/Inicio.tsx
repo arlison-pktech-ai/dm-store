@@ -48,7 +48,7 @@ export default function Inicio() {
           <Opcao para="/terminal/receber" icone="carteira" titulo="Receber fiado" sub="Quando a cliente paga uma parcela" />
           <Opcao para="/terminal/mercadoria" icone="caixa" titulo="Chegou mercadoria" sub="Dar entrada no estoque" />
           <Opcao para="/terminal/clientes" icone="pessoas" titulo="Clientes" sub="Buscar, cadastrar, ver o que deve" />
-          <Opcao para="/terminal/estoque" icone="grafico" titulo="Estoque" sub="Ver, ajustar e contar" />
+          <Opcao para="/terminal/estoque" icone="grafico" titulo="Estoque" sub="Ver, contar e mudar preços" />
         </div>
       </main>
     </>

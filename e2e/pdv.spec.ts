@@ -184,3 +184,54 @@ test('cartão aceita valor maior (taxa repassada) sem mudar o total, e o teclado
   await page.getByRole('button', { name: /Concluir e imprimir/ }).click();
   await expect(page.getByRole('heading', { name: /concluída/ })).toBeVisible();
 });
+
+test('preços: muda vários e salva com PIN; nada muda antes de salvar', async ({ page }) => {
+  await page.goto('/terminal/estoque');
+  await page.getByRole('button', { name: 'Atualizar preços' }).click();
+  await bipar(page, '7891000000024');
+  await expect(page.getByRole('dialog', { name: /Novo preço · Flor de Lótus/ })).toBeVisible();
+  await digitar(page, '139,90');
+  await page.getByRole('button', { name: /Usar este preço/ }).click();
+  const lotus = page.getByTestId('linha-preco').filter({ hasText: 'Flor de Lótus' });
+  await expect(lotus).toContainText('R$ 139,90');
+  await page.getByRole('button', { name: /Salvar preços/ }).click();
+  await digitar(page, '1234');
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await expect(page.getByText('Preços salvos: 1.')).toBeVisible();
+
+  // A venda já usa o preço novo
+  await page.goto('/terminal/venda');
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await expect(page.getByText('R$ 139,90').first()).toBeVisible();
+});
+
+test('venda: corrigir o preço de um item com PIN vale só para esta venda', async ({ page }) => {
+  await page.goto('/terminal/venda');
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await page.getByRole('button', { name: /Corrigir preço de Flor de Lótus/ }).click();
+  await digitar(page, '119,90');
+  await page.getByRole('button', { name: /Continuar com o PIN/ }).click();
+  await digitar(page, '9999');
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await expect(page.getByText('PIN incorreto.')).toBeVisible();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await page.getByRole('button', { name: 'Apagar' }).click();
+  await digitar(page, '1234');
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await expect(page.getByText('era R$ 129,90 cada')).toBeVisible();
+
+  await page.getByRole('button', { name: /Ir para o pagamento/ }).click();
+  await expect(page.getByTestId('falta')).toHaveText('R$ 119,90');
+  await page.getByRole('button', { name: 'PIX', exact: true }).click();
+  await page.getByRole('button', { name: /^Lançar R\$ 119,90 no PIX/ }).click();
+  await page.getByRole('button', { name: /Concluir e imprimir/ }).click();
+  await expect(page.getByRole('heading', { name: /concluída/ })).toBeVisible();
+
+  // O cadastro continua com o preço antigo
+  await page.goto('/terminal/precos');
+  await expect(page.getByTestId('linha-preco').filter({ hasText: 'Flor de Lótus' })).toContainText('R$ 129,90');
+});

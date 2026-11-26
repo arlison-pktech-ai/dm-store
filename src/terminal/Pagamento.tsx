@@ -13,6 +13,8 @@ import { mensagem, registrarErro } from '../lib/erros';
 import { somErro, somOk } from '../lib/som';
 import { Cupom, imprimir } from '../print/Impressao';
 import { useConfig } from './dados';
+import { PinJanela } from './componentes';
+import { ErroNegocio } from '../data/backend';
 import { totais, useVendaAtual, venda } from './vendaAtual';
 
 type Opcao = 'restante' | 'outro' | number;
@@ -27,6 +29,7 @@ export default function Pagamento() {
   const formas = (['cartao', 'pix', 'dinheiro', 'fiado', 'debito'] as FormaPagamento[]).filter((f) => cfg.formas_ativas.includes(f));
   const [forma, setForma] = useState<FormaPagamento>(formas[0] ?? 'pix');
   const [opcao, setOpcao] = useState<Opcao>('restante');
+  const [pedirPin, setPedirPin] = useState(false);
   const [outro, setOutro] = useState('');
   const [parcelas, setParcelas] = useState(1);
   const [vencimento, setVencimento] = useState(() => addDias(hojeISO(), 30));
@@ -78,16 +81,25 @@ export default function Pagamento() {
     setParcelas(1);
   };
 
-  const concluir = async () => {
+  const concluir = async (pinInformado?: string) => {
     if (concluindo) return;
     setConcluindo(true);
     setErro('');
     try {
       const atual = venda.get();
+      const corrigido = atual.itens.some((i) => i.preco_original != null);
+      const pin = pinInformado ?? venda.pinPreco();
+      if (corrigido && !pin) {
+        // A tela recarregou depois da correção: o PIN não fica guardado, então pede de novo.
+        setPedirPin(true);
+        setConcluindo(false);
+        return;
+      }
       const feita = await backend.finalizarVenda({
         idempotency_key: atual.idempotency_key,
         cliente_id: atual.cliente!.id,
-        itens: atual.itens.map((i) => ({ produto_id: i.produto_id, descricao: i.descricao, quantidade: i.quantidade, preco_unitario: i.preco_unitario })),
+        itens: atual.itens.map((i) => ({ produto_id: i.produto_id, descricao: i.descricao, quantidade: i.quantidade, preco_unitario: i.preco_unitario, ...(i.preco_original != null ? { preco_original: i.preco_original } : {}) })),
+        ...(corrigido ? { pin_preco: pin! } : {}),
         desconto: atual.desconto,
         para_entrega: atual.para_entrega,
         pagamentos: atual.pagamentos.map(({ id: _id, ...p }) => p),
@@ -99,6 +111,7 @@ export default function Pagamento() {
     } catch (e) {
       // A chave de idempotência continua a mesma: tentar de novo não duplica a venda.
       registrarErro('finalizar_venda', e);
+      if (mensagem(e).includes('PIN')) venda.esquecerPinPreco();
       somErro();
       setErro(mensagem(e));
       setConcluindo(false);
@@ -227,7 +240,7 @@ export default function Pagamento() {
               </div>
             ))}
             <div className="mt-auto flex flex-col gap-2.5">
-              <Botao variante="concluir" icone="check" grande className="h-[120px]" disabled={!quitado || v.pagamentos.length === 0 || concluindo} onClick={concluir}>
+              <Botao variante="concluir" icone="check" grande className="h-[120px]" disabled={!quitado || v.pagamentos.length === 0 || concluindo} onClick={() => concluir()}>
                 {concluindo ? 'Gravando…' : 'Concluir e imprimir'}
               </Botao>
               {!quitado && <span className="text-center text-[22px] text-suave">Falta lançar {brl(t.falta)}</span>}
@@ -235,6 +248,15 @@ export default function Pagamento() {
           </section>
         </div>
       </main>
+      {pedirPin && (
+        <PinJanela titulo="Confirmar preço corrigido" descricao="Esta venda tem preço corrigido. Digite o PIN de novo para concluir."
+          onFechar={() => setPedirPin(false)}
+          onConfirmar={async (pin) => {
+            if (!(await backend.conferirPin(pin))) throw new ErroNegocio('PIN incorreto.');
+            setPedirPin(false);
+            await concluir(pin);
+          }} />
+      )}
     </>
   );
 }
