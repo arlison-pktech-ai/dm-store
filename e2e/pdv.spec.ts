@@ -90,3 +90,32 @@ test('venda não conclui sem pagar tudo e código desconhecido oferece cadastro'
   await page.getByRole('button', { name: /^Lançar R\$ 50,00 no cartão/ }).click();
   await expect(page.getByRole('button', { name: /Concluir e imprimir/ })).toBeDisabled();
 });
+
+test('teclado físico funciona onde há teclado na tela, e o leitor não digita no valor', async ({ page }) => {
+  await page.getByRole('link', { name: /Receber fiado/ }).click();
+  await page.getByRole('button', { name: /Rosa Almeida/ }).first().click();
+  await page.getByRole('button', { name: /Outro valor/ }).click();
+  await page.keyboard.type('25.5', { delay: 100 });
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('7', { delay: 100 });
+  await expect(page.getByText('R$ 25,70', { exact: true })).toBeVisible();
+  await bipar(page, '7891000000017');
+  await page.waitForTimeout(300);
+  await expect(page.getByText('R$ 25,70', { exact: true })).toBeVisible();
+  for (let i = 0; i < 4; i++) await page.keyboard.press('Backspace');
+  await page.keyboard.type('40', { delay: 100 });
+  await expect(page.getByText('R$ 40,00 da parcela de')).toBeVisible();
+});
+
+test('chegou mercadoria aceita quantidade com mais de um dígito (tela e teclado físico)', async ({ page }) => {
+  await page.goto('/terminal/mercadoria');
+  await bipar(page, '7891000000024');
+  await expect(page.getByText('Quantidade que chegou')).toBeVisible();
+  await digitar(page, '12');
+  await expect(page.getByText('Total: R$ 744,00')).toBeVisible();
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('05', { delay: 100 });
+  await expect(page.getByText('Total: R$ 6.510,00')).toBeVisible();
+  await page.getByRole('button', { name: /Pôr na lista/ }).click();
+  await expect(page.getByText('105 un.', { exact: false })).toBeVisible();
+});

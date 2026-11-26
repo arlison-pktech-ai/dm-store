@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { backend } from '../data';
 import type { Produto } from '../domain/types';
@@ -123,6 +123,13 @@ function QuantidadeCusto({ produto, atual, onOk, onFechar }: { produto: Produto;
   const [qtd, setQtd] = useState(String(atual?.quantidade ?? 1));
   const [custo, setCusto] = useState(toInput(atual?.custo ?? produto.custo_medio));
   const [campo, setCampo] = useState<'qtd' | 'custo'>('qtd');
+  // A primeira tecla troca o "1" sugerido; as seguintes somam dígitos (10, 24, 120...).
+  const qtdTocada = useRef(!!atual);
+  const teclaQtd = (t: string) => {
+    const tocada = qtdTocada.current;
+    qtdTocada.current = true;
+    setQtd((v) => aplicarTecla(tocada ? v : '', t, { max: 4 }));
+  };
   return (
     <Janela titulo={descricaoProduto(produto)} onFechar={onFechar} largura={1200}>
       <span className="text-[26px] text-suave">Estoque agora: {produto.estoque_atual} · custo médio {brl(produto.custo_medio)} · preço de venda {brl(produto.preco_venda)}</span>
@@ -133,7 +140,7 @@ function QuantidadeCusto({ produto, atual, onOk, onFechar }: { produto: Produto;
           <span className="text-[28px]">Total: <strong>{brl((parseInt(qtd || '0', 10)) * parseBRL(custo))}</strong></span>
         </div>
         <TecladoNumerico semVirgula={campo === 'qtd'} className="h-[420px]"
-          onTecla={(t) => campo === 'qtd' ? setQtd((v) => aplicarTecla(v === '1' && !atual ? '' : v, t, { max: 4 })) : setCusto((v) => aplicarTecla(v, t, { numerico: true, max: 9 }))} />
+          onTecla={(t) => campo === 'qtd' ? teclaQtd(t) : setCusto((v) => aplicarTecla(v, t, { numerico: true, max: 9 }))} />
       </div>
       <Botao variante="concluir" grande icone="check" disabled={!parseInt(qtd || '0', 10)} onClick={() => onOk(parseInt(qtd, 10), parseBRL(custo))}>Pôr na lista</Botao>
     </Janela>

@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Icone, type NomeIcone } from './Icone';
 import { useOnline, useRelogio } from '../lib/useOnline';
 import { horaBR } from '../lib/dates';
+import { aoLer } from '../lib/useScanner';
 
 type Variante = 'primario' | 'concluir' | 'perigo' | 'neutro' | 'contorno' | 'link';
 
@@ -92,10 +93,56 @@ export function Etapas({ atual }: { atual: 1 | 2 | 3 }) {
   );
 }
 
+/** Teclados na tela montados agora; só o último (o mais à frente) recebe o teclado físico. */
+const tecladosAtivos: object[] = [];
+
+/**
+ * Deixa o teclado físico funcionar junto com o teclado na tela, sem mudar nada no visual.
+ * As teclas esperam 60 ms antes de entrar: se for o leitor de código de barras (teclas muito
+ * rápidas terminando em Enter), a leitura é descartada aqui e segue só para o leitor.
+ */
+function useTecladoFisico(onTecla: (t: string) => void, traduzir: (e: KeyboardEvent) => string | null) {
+  const ref = useRef({ onTecla, traduzir });
+  ref.current = { onTecla, traduzir };
+  useEffect(() => {
+    const eu = {};
+    tecladosAtivos.push(eu);
+    let pendentes: string[] = [];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const soltar = () => { const p = pendentes; pendentes = []; p.forEach((t) => ref.current.onTecla(t)); };
+    const descartar = () => { pendentes = []; clearTimeout(timer); };
+    const ouvir = (e: KeyboardEvent) => {
+      if (tecladosAtivos[tecladosAtivos.length - 1] !== eu) return;
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = document.activeElement;
+      if (el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && !['checkbox', 'radio', 'button'].includes(el.type))) return;
+      const t = ref.current.traduzir(e);
+      if (t === null) return;
+      e.preventDefault();
+      pendentes.push(t);
+      clearTimeout(timer);
+      timer = setTimeout(soltar, 60);
+    };
+    window.addEventListener('keydown', ouvir);
+    const sair = aoLer(descartar);
+    return () => {
+      window.removeEventListener('keydown', ouvir);
+      sair();
+      clearTimeout(timer);
+      const i = tecladosAtivos.indexOf(eu);
+      if (i >= 0) tecladosAtivos.splice(i, 1);
+    };
+  }, []);
+}
+
 const LINHAS_TEXTO = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKLÇ', 'ZXCVBNM'];
 
 /** Teclado na tela, teclas grandes (princípio "digitação mínima"). */
 export function TecladoTexto({ onTecla, className = '', comArroba }: { onTecla: (t: string) => void; className?: string; comArroba?: boolean }) {
+  useTecladoFisico(onTecla, (e) => {
+    if (e.key === 'Backspace') return '⌫';
+    return e.key.length === 1 ? e.key : null;
+  });
   const tecla = 'min-w-0 rounded-[14px] border-none bg-white text-[32px] font-bold text-tinta shadow-[0_2px_0_var(--color-tecla-sombra)] active:bg-azul-claro';
   return (
     <div role="group" aria-label="Teclado na tela" className={`flex flex-col gap-3 rounded-[22px] bg-teclado p-5 ${className}`}>
@@ -114,6 +161,12 @@ export function TecladoTexto({ onTecla, className = '', comArroba }: { onTecla: 
 }
 
 export function TecladoNumerico({ onTecla, className = '', semVirgula }: { onTecla: (t: string) => void; className?: string; semVirgula?: boolean }) {
+  useTecladoFisico(onTecla, (e) => {
+    if (e.key === 'Backspace') return '⌫';
+    if (/^[0-9]$/.test(e.key)) return e.key;
+    if (!semVirgula && (e.key === ',' || e.key === '.')) return ',';
+    return null;
+  });
   const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9', semVirgula ? '' : ',', '0', '⌫'];
   return (
     <div role="group" aria-label="Teclado numérico" className={`grid grid-cols-3 gap-3 rounded-[20px] bg-teclado p-4 ${className}`} style={{ gridAutoRows: 'minmax(0, 1fr)' }}>
