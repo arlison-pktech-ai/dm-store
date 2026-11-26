@@ -135,9 +135,10 @@ function useTecladoFisico(onTecla: (t: string) => void, traduzir: (e: KeyboardEv
   }, []);
 }
 
-const LINHAS_TEXTO = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKLÇ', 'ZXCVBNM'];
+const LINHAS_TEXTO = ['QWERTYUIOP', 'ASDFGHJKLÇ', 'ZXCVBNM'];
+const BLOCO_NUMEROS = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0'];
 
-/** Teclado na tela, teclas grandes (princípio "digitação mínima"). */
+/** Teclado na tela, teclas grandes (princípio "digitação mínima"): letras e, ao lado, os números. */
 export function TecladoTexto({ onTecla, className = '', comArroba }: { onTecla: (t: string) => void; className?: string; comArroba?: boolean }) {
   useTecladoFisico(onTecla, (e) => {
     if (e.key === 'Backspace') return '⌫';
@@ -145,17 +146,24 @@ export function TecladoTexto({ onTecla, className = '', comArroba }: { onTecla: 
   });
   const tecla = 'min-w-0 rounded-[14px] border-none bg-white text-[32px] font-bold text-tinta shadow-[0_2px_0_var(--color-tecla-sombra)] active:bg-azul-claro';
   return (
-    <div role="group" aria-label="Teclado na tela" className={`flex flex-col gap-3 rounded-[22px] bg-teclado p-5 ${className}`}>
-      {LINHAS_TEXTO.map((l, i) => (
-        <div key={l} className="flex flex-1 gap-3">
-          {l.split('').map((c) => <button key={c} type="button" className={`${tecla} flex-1`} onClick={() => onTecla(c)}>{c}</button>)}
-          {i === 3 && <>
-            {comArroba && <button type="button" className={`${tecla} flex-1`} onClick={() => onTecla(',')}>,</button>}
-            <button type="button" className={tecla} style={{ flex: 3 }} onClick={() => onTecla(' ')}>Espaço</button>
-            <button type="button" className={tecla} style={{ flex: 2 }} onClick={() => onTecla('⌫')}>Apagar</button>
-          </>}
+    <div role="group" aria-label="Teclado na tela" className={`flex gap-6 rounded-[22px] bg-teclado p-5 ${className}`}>
+      <div className="flex min-w-0 flex-[10] flex-col gap-3">
+        {LINHAS_TEXTO.map((l) => (
+          <div key={l} className="flex flex-1 gap-3">
+            {l.split('').map((c) => <button key={c} type="button" className={`${tecla} flex-1`} onClick={() => onTecla(c)}>{c}</button>)}
+          </div>
+        ))}
+        <div className="flex flex-1 gap-3">
+          {comArroba && <button type="button" className={`${tecla} flex-1`} onClick={() => onTecla(',')}>,</button>}
+          <button type="button" className={tecla} style={{ flex: 6 }} onClick={() => onTecla(' ')}>Espaço</button>
+          <button type="button" className={tecla} style={{ flex: 3 }} onClick={() => onTecla('⌫')}>Apagar</button>
         </div>
-      ))}
+      </div>
+      <div role="group" aria-label="Números" className="grid min-w-0 flex-[3] grid-cols-3 gap-3" style={{ gridTemplateRows: 'repeat(4, minmax(0, 1fr))' }}>
+        {BLOCO_NUMEROS.map((c) => (
+          <button key={c} type="button" className={`${tecla} ${c === '0' ? 'col-span-3' : ''}`} onClick={() => onTecla(c)}>{c}</button>
+        ))}
+      </div>
     </div>
   );
 }
