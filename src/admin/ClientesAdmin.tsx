@@ -134,7 +134,7 @@ function Recebimentos() {
     }
   };
   return (
-    <Card titulo="Últimos recebimentos do fiado">
+    <Card titulo="Últimos recebimentos do crediário">
       <Erro>{erro}</Erro>
       {grupos.size === 0 && <span className="text-[14px] text-suave">Nenhum recebimento ainda.</span>}
       {[...grupos.entries()].map(([g, rs]) => (

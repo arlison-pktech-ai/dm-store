@@ -7,7 +7,7 @@ import { diaMes, hojeISO } from '../lib/dates';
 import { Card, Linha } from './ui';
 
 const CORES = { cartao: '#1F5FBF', pix: '#5B8FD9', dinheiro: '#9DBBE8', fiado: '#C98A1B', debito: '#17803D' } as const;
-const NOMES = { cartao: 'Cartão', pix: 'PIX', dinheiro: 'Dinheiro', fiado: 'Fiado', debito: 'Débito' } as const;
+const NOMES = { cartao: 'Cartão', pix: 'PIX', dinheiro: 'Dinheiro', fiado: 'Crediário', debito: 'Débito' } as const;
 
 /** RF-62: painel do dia e do mês. */
 export default function Painel() {
@@ -45,10 +45,10 @@ export default function Painel() {
             <span key={f} className="flex items-center gap-1.5"><span className="size-2.5 rounded-[3px]" style={{ background: CORES[f] }} />{NOMES[f]} {brl(p?.por_forma[f] ?? 0)}</span>
           ))}
         </div>
-        <span className="text-[13px] text-suave">Recebido do fiado no período: <strong className="text-tinta">{brl(p?.recebido_fiado ?? 0)}</strong></span>
+        <span className="text-[13px] text-suave">Recebido do crediário no período: <strong className="text-tinta">{brl(p?.recebido_fiado ?? 0)}</strong></span>
         {(p?.acrescimo_cartao ?? 0) > 0 && <span className="text-[13px] text-suave">Taxa do cartão repassada às clientes (fora do vendido): <strong className="text-tinta">{brl(p!.acrescimo_cartao!)}</strong></span>}
       </Card>
-      <Card titulo={<span className="font-normal text-suave">A receber do fiado</span>} direita={<span className="text-[26px] font-bold">{brl(receber.data?.total_aberto ?? 0)}</span>}>
+      <Card titulo={<span className="font-normal text-suave">A receber do crediário</span>} direita={<span className="text-[26px] font-bold">{brl(receber.data?.total_aberto ?? 0)}</span>}>
         <div className="grid grid-cols-3 gap-2">
           <span className="flex flex-col rounded-[10px] bg-vermelho-claro p-2"><span className="text-[12px] text-vermelho-escuro">Vencido</span><span className="text-[16px] font-bold text-vermelho">{brl(receber.data?.total_vencido ?? 0)}</span></span>
           <span className="flex flex-col rounded-[10px] bg-fundo p-2"><span className="text-[12px] text-suave">Em 7 dias</span><span className="text-[16px] font-bold">{brl(receber.data?.a_vencer_7 ?? 0)}</span></span>

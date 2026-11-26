@@ -95,7 +95,7 @@ export function Cupom({ venda, cfg, reimpressao }: { venda: Venda; cfg: ConfigLo
         </div>
         {fiado && venda.parcelas.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700 }}>FIADO · PARCELAS</span>
+            <span style={{ fontSize: '12px', fontWeight: 700 }}>CREDIÁRIO · PARCELAS</span>
             {venda.parcelas.map((p) => (
               <div key={p.numero} style={S.linha}><span>{p.numero}/{venda.parcelas.length} · vence {dataBR(p.vencimento)}</span><span>{num(p.valor)}</span></div>
             ))}
@@ -109,10 +109,10 @@ export function Cupom({ venda, cfg, reimpressao }: { venda: Venda; cfg: ConfigLo
       </div>
       {fiado && cfg.vias_fiado && venda.status === 'concluida' && (
         <div style={{ ...S.papel, breakBefore: 'page' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, textAlign: 'center' }}>VIA DA LOJA · FIADO</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, textAlign: 'center' }}>VIA DA LOJA · CREDIÁRIO</span>
           <span>Venda nº {numeroVenda(venda.numero)} · {dataBR(venda.criada_em.slice(0, 10))}</span>
           <span>Cliente: {c.nome} · {c.telefone}</span>
-          <span>Fiado: R$ {num(fiado.valor)} em {venda.parcelas.length} parcela{venda.parcelas.length > 1 ? 's' : ''} ({venda.parcelas.map((p) => `${num(p.valor)} em ${dataBR(p.vencimento)}`).join('; ')})</span>
+          <span>Crediário: R$ {num(fiado.valor)} em {venda.parcelas.length} parcela{venda.parcelas.length > 1 ? 's' : ''} ({venda.parcelas.map((p) => `${num(p.valor)} em ${dataBR(p.vencimento)}`).join('; ')})</span>
           <span>Reconheço o débito acima.</span>
           <div style={{ height: '44px' }} />
           <div style={{ borderTop: '1.5px solid #000' }} />

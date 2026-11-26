@@ -7,7 +7,7 @@ export const NOME_FORMA: Record<FormaPagamento, string> = {
   cartao: 'Cartão',
   pix: 'PIX',
   dinheiro: 'Dinheiro',
-  fiado: 'Fiado',
+  fiado: 'Crediário',
   debito: 'Débito',
 };
 

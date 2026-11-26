@@ -1,12 +1,12 @@
 # PDV Dalva Cosméticos
 
-Sistema web de vendas, estoque, clientes e fiado para a Dalva Cosméticos, feito a partir do
+Sistema web de vendas, estoque, clientes e crediário para a Dalva Cosméticos, feito a partir do
 **PRD — PDV Perfumaria** e das telas do Claude Design. A operadora usa um terminal touch
 (1920×1080, Chrome em quiosque) e o administrador usa o celular.
 
 | Área | Endereço | Quem usa |
 | --- | --- | --- |
-| Terminal | `/terminal` | Operadora: Vender, Receber fiado, Chegou mercadoria, Clientes, Estoque (ver, ajustar e contar) |
+| Terminal | `/terminal` | Operadora: Vender, Receber crediário, Chegou mercadoria, Clientes, Estoque (ver, ajustar e contar) |
 | Administrador | `/admin` | Painel, vendas, clientes, estoque, configurações, exportação, auditoria |
 
 ## Rodar no computador (modo demonstração)
@@ -37,7 +37,7 @@ src/
 supabase/
   migrations/  17 tabelas, RPCs transacionais e RLS
   tests/       testes SQL das RPCs (rodam num Postgres comum)
-e2e/           testes Playwright de venda e fiado
+e2e/           testes Playwright de venda e crediário
 docker/, Dockerfile, docker-stack.yml   imagem nginx + stack do Swarm com Traefik
 backup/        imagem do backup diário (pg_dump + rclone) e script de restauração
 docs/          instalação do terminal e folha "o que fazer se…"
@@ -100,7 +100,7 @@ impressa a folha [docs/o-que-fazer-se.md](docs/o-que-fazer-se.md).
 npm test                 # regras de negócio (Vitest)
 npm run typecheck
 scripts/test-db.sh       # migrações + testes SQL das RPCs num Postgres (PGHOST/PGUSER...)
-npm run e2e              # Playwright: venda com pagamento misto, fiado, bloqueios
+npm run e2e              # Playwright: venda com pagamento misto, crediário, bloqueios
 ```
 
 O CI roda tudo isso a cada pull request. A impressão precisa ser testada na impressora real a cada versão.

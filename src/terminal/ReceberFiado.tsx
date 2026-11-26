@@ -26,7 +26,7 @@ export default function ReceberFiado() {
   if (!clienteId) {
     return (
       <>
-        <Cabecalho voltar={{ para: '/terminal', texto: 'Início' }} titulo="Receber fiado" direita={titulo} />
+        <Cabecalho voltar={{ para: '/terminal', texto: 'Início' }} titulo="Receber crediário" direita={titulo} />
         <BuscaCliente titulo="Quem está pagando?" mostrarDivida onEscolher={(c) => nav(`/terminal/receber/${c.id}`)} />
       </>
     );
@@ -91,7 +91,7 @@ function Receber({ clienteId }: { clienteId: string }) {
   if (feito) {
     return (
       <>
-        <Cabecalho voltar={{ para: '/terminal', texto: 'Início' }} titulo="Receber fiado" />
+        <Cabecalho voltar={{ para: '/terminal', texto: 'Início' }} titulo="Receber crediário" />
         <main className="flex flex-1 flex-col items-center justify-center gap-10">
           <span className="flex size-[180px] items-center justify-center rounded-full bg-verde text-white"><Icone nome="check" tamanho={110} traco={2.6} /></span>
           <h1 className="m-0 text-[64px] font-bold">Pagamento recebido</h1>
@@ -108,7 +108,7 @@ function Receber({ clienteId }: { clienteId: string }) {
 
   return (
     <>
-      <Cabecalho voltar={{ para: '/terminal', texto: 'Início' }} titulo="Receber fiado" direita={`${diaExtenso(agora)} · ${horaBR(agora)}`} />
+      <Cabecalho voltar={{ para: '/terminal', texto: 'Início' }} titulo="Receber crediário" direita={`${diaExtenso(agora)} · ${horaBR(agora)}`} />
       <main className="flex min-h-0 flex-1 flex-col gap-6 px-12 py-8">
         <section aria-label="Cliente" className="flex h-[96px] shrink-0 items-center gap-6 rounded-[20px] border-2 border-borda bg-white pl-6 pr-4">
           <span className="flex size-16 items-center justify-center rounded-full bg-azul-claro text-[26px] font-bold text-azul">{c ? iniciais(c.nome) : ''}</span>
