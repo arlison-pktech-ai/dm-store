@@ -85,3 +85,10 @@ describe('validarVenda (RF-16)', () => {
     ).toBeNull();
   });
 });
+
+import { lerCSV } from '../lib/csv';
+describe('lerCSV', () => {
+  it('lê ponto e vírgula, aspas e acentos no cabeçalho', () => {
+    expect(lerCSV('Nome;Preço;Código de barras\n"Âmbar; 100 ml";189,90;789\n')).toEqual([{ nome: 'Âmbar; 100 ml', preco: '189,90', codigo_de_barras: '789' }]);
+  });
+});

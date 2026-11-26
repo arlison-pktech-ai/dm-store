@@ -1,0 +1,50 @@
+/** CSV simples (vírgula ou ponto e vírgula, aspas). Excel: "Salvar como CSV". */
+export function lerCSV(texto: string): Record<string, string>[] {
+  const t = texto.replace(/^﻿/, '');
+  const primeira = t.split(/\r?\n/, 1)[0] ?? '';
+  const sep = (primeira.match(/;/g)?.length ?? 0) > (primeira.match(/,/g)?.length ?? 0) ? ';' : ',';
+  const linhas: string[][] = [];
+  let campo = '';
+  let linha: string[] = [];
+  let aspas = false;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (aspas) {
+      if (ch === '"' && t[i + 1] === '"') { campo += '"'; i++; }
+      else if (ch === '"') aspas = false;
+      else campo += ch;
+    } else if (ch === '"') aspas = true;
+    else if (ch === sep) { linha.push(campo); campo = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && t[i + 1] === '\n') i++;
+      linha.push(campo); campo = '';
+      if (linha.some((c) => c.trim())) linhas.push(linha);
+      linha = [];
+    } else campo += ch;
+  }
+  linha.push(campo);
+  if (linha.some((c) => c.trim())) linhas.push(linha);
+  const [cab, ...resto] = linhas;
+  if (!cab) return [];
+  const chaves = cab.map((c) => c.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_'));
+  return resto.map((l) => Object.fromEntries(chaves.map((k, i) => [k, (l[i] ?? '').trim()])));
+}
+
+export function gerarCSV(linhas: Record<string, unknown>[]): string {
+  if (!linhas.length) return '';
+  const chaves = [...new Set(linhas.flatMap((l) => Object.keys(l)))];
+  const esc = (v: unknown) => {
+    const s = v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+    return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return '﻿' + [chaves.join(';'), ...linhas.map((l) => chaves.map((k) => esc(l[k])).join(';'))].join('\n');
+}
+
+export function baixar(nome: string, conteudo: string) {
+  const url = URL.createObjectURL(new Blob([conteudo], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
