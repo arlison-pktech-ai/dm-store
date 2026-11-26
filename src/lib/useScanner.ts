@@ -11,6 +11,13 @@ import { useEffect, useRef } from 'react';
 type Tratador = (codigo: string) => void;
 
 const tratadores: Tratador[] = [];
+const observadores = new Set<() => void>();
+
+/** Avisa quando uma leitura é reconhecida (o teclado na tela usa para descartar o que o leitor "digitou"). */
+export function aoLer(cb: () => void) {
+  observadores.add(cb);
+  return () => { observadores.delete(cb); };
+}
 let pendente: { codigo: string; quando: number } | null = null;
 let instalado = false;
 
@@ -55,6 +62,7 @@ function instalar() {
         }
         buf = '';
         alvo = null;
+        observadores.forEach((o) => o());
         entregar(codigo);
         return;
       }
