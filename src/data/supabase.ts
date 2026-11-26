@@ -94,6 +94,9 @@ export class SupabaseBackend implements Backend {
   async ajustarEstoque(produtoId: string, quantidade: number, motivo: string, pin?: string) {
     await this.rpc('ajustar_estoque', { produto_id: produtoId, quantidade, motivo, pin: pin ?? null });
   }
+  async registrarContagem(itens: { produto_id: string; contado: number }[], pin?: string) {
+    return (await this.rpc('registrar_contagem', { itens, pin: pin ?? null })) as number;
+  }
   async importarProdutos(linhas: NovoProduto[]) {
     let n = 0;
     for (const l of linhas) {

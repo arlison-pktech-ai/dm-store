@@ -106,6 +106,18 @@ begin
   perform public.ajustar_estoque(pa, -1, 'quebra', '1234');
   assert (select estoque_atual from public.produtos where id = pa) = 3, 'ajuste';
 
+  -- Contagem: sem PIN é recusada e nada muda; com PIN cada produto fica com o contado
+  begin
+    perform public.registrar_contagem(jsonb_build_array(jsonb_build_object('produto_id', pa, 'contado', 7)), '0000');
+    raise exception 'esperava erro';
+  exception when others then
+    if sqlerrm = 'esperava erro' then raise; end if;
+  end;
+  assert (select estoque_atual from public.produtos where id = pa) = 3, 'contagem sem PIN não muda';
+  assert public.registrar_contagem(jsonb_build_array(jsonb_build_object('produto_id', pa, 'contado', 7)), '1234') = 1, 'contagem ajusta 1';
+  assert (select estoque_atual from public.produtos where id = pa) = 7, 'contagem fixa o contado';
+  assert public.registrar_contagem(jsonb_build_array(jsonb_build_object('produto_id', pa, 'contado', 7)), '1234') = 0, 'contagem igual não gera movimento';
+
   -- Alterar preço sem PIN é recusado
   begin
     perform public.salvar_produto(jsonb_build_object('id', pa, 'nome', 'Essência Âmbar', 'preco_venda', 1), null);
@@ -148,6 +160,7 @@ do $$
 begin
   assert (select count(*) from public.auditoria) >= 3, 'auditoria registrada';
   assert (select count(*) from public.auditoria where ator = 'terminal' and acao = 'cancelar_venda') = 1, 'ator terminal';
+  assert (select count(*) from public.auditoria where acao = 'contagem_estoque') = 2, 'contagem auditada';
   assert (public.painel(public.hoje_loja(), public.hoje_loja()) ->> 'vendas_qtd')::int = 1, 'painel conta só concluídas';
   perform public.trocar_pin('4321');
   perform public.ajustar_estoque((select id from public.produtos limit 1), 1, 'contagem');  -- admin sem PIN

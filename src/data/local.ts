@@ -276,6 +276,24 @@ export class LocalBackend implements Backend {
     });
   }
 
+  async registrarContagem(itens: { produto_id: string; contado: number }[], pin?: string) {
+    const ator = await this.ator();
+    return this.tx(async (db) => {
+      await this.exigirPin(db, pin);
+      if (!itens.length) throw new ErroNegocio('Nenhum produto contado.');
+      const detalhes: { produto_id: string; de: number; para: number }[] = [];
+      for (const i of itens) {
+        if (!Number.isInteger(i.contado) || i.contado < 0) throw new ErroNegocio('Quantidade contada inválida.');
+        const atual = this.estoque(db, i.produto_id);
+        if (i.contado === atual) continue;
+        db.movimentos.push({ id: uid(), produto_id: i.produto_id, tipo: 'ajuste', quantidade: i.contado - atual, custo_unitario: null, origem_id: null, motivo: 'contagem', criado_em: agora() });
+        detalhes.push({ produto_id: i.produto_id, de: atual, para: i.contado });
+      }
+      this.audit(db, ator, 'contagem_estoque', 'produtos', null, { contados: itens.length, ajustados: detalhes.length, itens: detalhes });
+      return detalhes.length;
+    });
+  }
+
   async importarProdutos(linhas: NovoProduto[]) {
     let n = 0;
     for (const l of linhas) {

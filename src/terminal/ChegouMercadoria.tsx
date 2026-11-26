@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { backend } from '../data';
 import type { Produto } from '../domain/types';
 import { Icone } from '../components/Icone';
@@ -26,7 +26,9 @@ export default function ChegouMercadoria() {
     localStorage.setItem(KEY, JSON.stringify(n));
     return n;
   });
-  const [editando, setEditando] = useState<Produto | null>(null);
+  // Vindo da tela Estoque com um produto escolhido, já abre a quantidade dele.
+  const vindo = (useLocation().state as { produto?: Produto } | null)?.produto ?? null;
+  const [editando, setEditando] = useState<Produto | null>(vindo);
   const [novoCodigo, setNovoCodigo] = useState<string | null>(null);
   const [procurar, setProcurar] = useState<false | 'entrada' | 'ajuste'>(false);
   const [ajuste, setAjuste] = useState<Produto | null>(null);
@@ -177,7 +179,7 @@ function EscolherProduto({ produtos, modoInicial, onEscolher, onNovo, onFechar }
 }
 
 /** RF-23: ajuste com motivo obrigatório e PIN. */
-function AjusteEstoque({ produto, onFeito, onFechar }: { produto: Produto; onFeito: () => void; onFechar: () => void }) {
+export function AjusteEstoque({ produto, onFeito, onFechar }: { produto: Produto; onFeito: () => void; onFechar: () => void }) {
   const [novo, setNovo] = useState<string | null>(null);
   if (novo === null) {
     return <ContarEstoque produto={produto} onFechar={onFechar} onOk={(n) => setNovo(String(n))} />;

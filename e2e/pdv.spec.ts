@@ -119,3 +119,42 @@ test('chegou mercadoria aceita quantidade com mais de um dígito (tela e teclado
   await page.getByRole('button', { name: /Pôr na lista/ }).click();
   await expect(page.getByText('105 un.', { exact: false })).toBeVisible();
 });
+
+test('estoque: contagem só ajusta depois de terminar e confirmar com PIN', async ({ page }) => {
+  await page.getByRole('link', { name: /Estoque/ }).click();
+  const ambar = page.getByTestId('linha-estoque').filter({ hasText: 'Essência Âmbar' });
+  await expect(ambar).toContainText('1 un.');
+  await page.getByRole('button', { name: /Contar estoque/ }).click();
+
+  await bipar(page, '7891000000017');
+  await bipar(page, '7891000000017');
+  await bipar(page, '7891000000017');
+  await bipar(page, '7891000000024');
+  const linhaAmbar = page.getByTestId('linha-contagem').filter({ hasText: 'Essência Âmbar' });
+  await expect(linhaAmbar.getByTestId('diferenca')).toHaveText('+2');
+  await page.getByTestId('linha-contagem').filter({ hasText: 'Flor de Lótus' }).getByRole('button', { name: 'Digitar quantidade' }).click();
+  await digitar(page, '12');
+  await page.getByRole('button', { name: /Usar esta quantidade/ }).click();
+
+  // Sair no meio não muda nada; a contagem continua guardada
+  await page.getByRole('link', { name: 'Estoque' }).click();
+  await expect(ambar).toContainText('1 un.');
+  await page.getByRole('button', { name: /Continuar contagem/ }).click();
+  await expect(linhaAmbar).toBeVisible();
+
+  await page.getByRole('button', { name: /Terminar contagem/ }).click();
+  await expect(page.getByText('de 1 para 3')).toBeVisible();
+  await expect(page.getByText('de 0 para 12')).toBeVisible();
+  await page.getByRole('button', { name: /Confirmar e ajustar/ }).click();
+  await digitar(page, '1234');
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await expect(page.getByText('Estoque ajustado: 2 produtos.')).toBeVisible();
+  await expect(ambar).toContainText('3 un.');
+  await expect(page.getByTestId('linha-estoque').filter({ hasText: 'Flor de Lótus' })).toContainText('12 un.');
+});
+
+test('estoque: dar entrada a partir da lista abre a quantidade do produto', async ({ page }) => {
+  await page.goto('/terminal/estoque');
+  await page.getByTestId('linha-estoque').filter({ hasText: 'Flor de Lótus' }).getByRole('button', { name: 'Dar entrada' }).click();
+  await expect(page.getByRole('dialog', { name: /Flor de Lótus/ })).toBeVisible();
+});

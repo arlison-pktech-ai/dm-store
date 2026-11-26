@@ -14,6 +14,7 @@ import Concluida from './Concluida';
 import ReceberFiado from './ReceberFiado';
 import ChegouMercadoria from './ChegouMercadoria';
 import Clientes from './Clientes';
+import Estoque, { Contagem } from './Estoque';
 
 export default function Terminal() {
   const sessao = useQuery({ queryKey: ['sessao'], queryFn: () => backend.sessao() });
@@ -29,6 +30,8 @@ export default function Terminal() {
           <Route path="receber" element={<ReceberFiado />} />
           <Route path="receber/:clienteId" element={<ReceberFiado />} />
           <Route path="mercadoria" element={<ChegouMercadoria />} />
+          <Route path="estoque" element={<Estoque />} />
+          <Route path="estoque/contagem" element={<Contagem />} />
           <Route path="clientes" element={<Clientes />} />
           <Route path="clientes/:id" element={<Clientes />} />
           <Route path="*" element={<Inicio />} />
