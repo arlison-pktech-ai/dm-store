@@ -24,13 +24,13 @@ export default function Estoque() {
     <>
       <h1 className="m-0 text-[22px]">Estoque e produtos</h1>
       <div className="flex gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome, marca ou código" className="min-h-11 flex-1 rounded-xl border-2 border-borda px-3 text-[16px]" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nome, marca ou código" className="min-h-11 min-w-0 flex-1 rounded-xl border-2 border-borda px-3 text-[16px]" />
         <B variante="primario" onClick={() => setSel('novo')}>Novo</B>
         <B onClick={() => setSel('importar')}>Importar</B>
       </div>
       <div className="flex gap-1.5">
         {([['todos', 'Todos'], ['repor', 'Lista de reposição']] as const).map(([k, n]) => (
-          <button key={k} type="button" onClick={() => setFiltro(k)} className={`h-11 flex-1 rounded-xl border-2 text-[13px] font-bold ${filtro === k ? 'border-azul bg-azul-claro text-azul' : 'border-borda bg-white'}`}>{n}</button>
+          <button key={k} type="button" onClick={() => setFiltro(k)} className={`h-11 flex-1 rounded-xl border-2 px-3 text-[13px] font-bold md:flex-none md:px-6 ${filtro === k ? 'border-azul bg-azul-claro text-azul' : 'border-borda bg-white'}`}>{n}</button>
         ))}
       </div>
       <Card>
@@ -91,10 +91,10 @@ function EditarProduto({ p, onFechar }: { p: Produto | null; onFechar: () => voi
   };
   const NOMES_MOV = { entrada: 'Entrada', venda: 'Venda', ajuste: 'Ajuste', cancelamento: 'Cancelamento' };
   return (
-    <>
+    <div className="grid items-start gap-3 md:gap-4 lg:grid-cols-2">
       <Card titulo={p ? 'Editar produto' : 'Novo produto'} direita={<B onClick={onFechar}>Voltar</B>}>
         <Campo rotulo="Nome" value={f.nome} onChange={set('nome')} />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-2">
           <Campo rotulo="Marca" value={f.marca} onChange={set('marca')} />
           <Campo rotulo="Categoria" value={f.categoria} onChange={set('categoria')} />
           <Campo rotulo="Volume (ml)" value={f.volume} onChange={set('volume')} inputMode="numeric" />
@@ -109,7 +109,7 @@ function EditarProduto({ p, onFechar }: { p: Produto | null; onFechar: () => voi
         <Ok>{ok}</Ok>
         <B variante="primario" onClick={salvar}>Salvar</B>
       </Card>
-      {p && <>
+      {p && <div className="flex min-w-0 flex-col gap-3 md:gap-4">
         <Card titulo="Ajustar estoque">
           <div className="grid grid-cols-2 gap-2">
             <Campo rotulo="Quantidade (+ ou −)" value={ajuste.qtd} onChange={(e) => setAjuste((a) => ({ ...a, qtd: e.target.value }))} inputMode="numeric" placeholder="-1" />
@@ -127,8 +127,8 @@ function EditarProduto({ p, onFechar }: { p: Produto | null; onFechar: () => voi
               dir={<strong className={m.quantidade < 0 ? 'text-vermelho' : 'text-verde-escuro'}>{m.quantidade > 0 ? '+' : ''}{m.quantidade}</strong>} />
           ))}
         </Card>
-      </>}
-    </>
+      </div>}
+    </div>
   );
 }
 
@@ -169,7 +169,7 @@ function Importar({ onFechar }: { onFechar: () => void }) {
     <Card titulo="Importar planilha" direita={<B onClick={onFechar}>Voltar</B>}>
       <div className="flex gap-1.5">
         {(['produtos', 'clientes'] as const).map((k) => (
-          <button key={k} type="button" onClick={() => { setTipo(k); setLinhas([]); }} className={`h-11 flex-1 rounded-xl border-2 text-[13px] font-bold ${tipo === k ? 'border-azul bg-azul-claro text-azul' : 'border-borda bg-white'}`}>{k === 'produtos' ? 'Produtos' : 'Clientes e saldos'}</button>
+          <button key={k} type="button" onClick={() => { setTipo(k); setLinhas([]); }} className={`h-11 flex-1 rounded-xl border-2 px-3 text-[13px] font-bold md:flex-none md:px-6 ${tipo === k ? 'border-azul bg-azul-claro text-azul' : 'border-borda bg-white'}`}>{k === 'produtos' ? 'Produtos' : 'Clientes e saldos'}</button>
         ))}
       </div>
       <span className="text-[13px] text-suave">

@@ -36,6 +36,7 @@ export default function Painel() {
           ))}
         </div>
       </header>
+      <div className="flex flex-col gap-3 md:block md:columns-2 md:gap-4 xl:columns-3 [&>section]:md:mb-4 [&>section]:md:break-inside-avoid">
       <Card titulo={<span className="font-normal text-suave">Vendido · {p?.vendas_qtd ?? 0} venda{p?.vendas_qtd === 1 ? '' : 's'}</span>} direita={<span className="text-[26px] font-bold">{brl(p?.vendido ?? 0)}</span>}>
         <div className="flex h-3 gap-0.5 overflow-hidden rounded-full bg-cinza">
           {formas.map((f) => (p?.por_forma[f] ?? 0) > 0 && <span key={f} style={{ flex: p!.por_forma[f], background: CORES[f] }} />)}
@@ -80,6 +81,7 @@ export default function Painel() {
           <span className={`text-[13px] ${pctMei >= 80 ? 'font-bold text-vermelho' : 'text-suave'}`}>{pctMei}% do teto{pctMei >= 100 ? ' · passou do teto!' : pctMei >= 80 ? ' · atenção, passou de 80%' : ''}</span>
         </Card>
       )}
+      </div>
     </>
   );
 }

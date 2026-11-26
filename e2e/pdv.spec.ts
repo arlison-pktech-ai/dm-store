@@ -254,3 +254,21 @@ test('cartão já sugere o valor com a taxa da maquininha da parcela escolhida',
   await page.getByRole('button', { name: 'Sem taxa' }).click();
   await expect(page.getByTestId('maquininha')).toHaveCount(0);
 });
+
+test('crediário: prazo quinzenal gera parcelas a cada 15 dias', async ({ page }) => {
+  await page.getByRole('link', { name: /Vender/ }).click();
+  await page.getByRole('button', { name: /Rosa Almeida/ }).click();
+  await bipar(page, '7891000000024');
+  await page.getByRole('button', { name: /Ir para o pagamento/ }).click();
+  await page.getByRole('button', { name: /Restante no crediário/ }).click();
+  await expect(page.getByRole('button', { name: 'Mensal' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Quinzenal' }).click();
+  await page.getByRole('button', { name: '2×' }).click();
+  const dm = (dias: number) => {
+    const d = new Date(Date.now() + dias * 86400000);
+    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Manaus', day: '2-digit', month: '2-digit' }).format(d);
+  };
+  await expect(page.getByText(new RegExp(`em ${dm(15)} · .* em ${dm(30)}`))).toBeVisible();
+  await page.getByRole('button', { name: /^Lançar .* no crediário/ }).click();
+  await expect(page.getByText(/2 × .* · Quinzenal · 1º venc\./)).toBeVisible();
+});

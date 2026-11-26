@@ -5,6 +5,7 @@ import { backend } from '../data';
 import { Icone, type NomeIcone } from '../components/Icone';
 import { mensagem } from '../lib/erros';
 import { B, Campo, Erro } from './ui';
+import { useConfig } from '../terminal/dados';
 import Painel from './Painel';
 import Vendas from './Vendas';
 import ClientesAdmin from './ClientesAdmin';
@@ -74,25 +75,29 @@ const MENU: { para: string; nome: string; icone: NomeIcone }[] = [
 
 function Layout() {
   const nav = useNavigate();
+  const cfg = useConfig();
+  // Celular: menu fixo embaixo. Tablet: menu lateral só com ícones e nomes curtos. Computador: menu lateral largo.
   return (
-    <div className="mx-auto flex min-h-full max-w-[640px] flex-col bg-fundo">
-      <main className="flex flex-1 flex-col gap-3 p-4 pb-24">
+    <div className="flex min-h-full bg-fundo">
+      <nav aria-label="Menu"
+        className="fixed inset-x-0 bottom-0 z-10 grid h-[72px] grid-cols-5 border-t border-borda bg-white px-2 pb-[env(safe-area-inset-bottom)] md:sticky md:top-0 md:flex md:h-screen md:w-[96px] md:shrink-0 md:flex-col md:gap-1 md:border-r md:border-t-0 md:px-2 md:py-4 lg:w-[232px] lg:px-3">
+        <span className="hidden px-1 pb-4 text-center text-[13px] font-bold leading-tight md:block lg:px-3 lg:text-left lg:text-[17px]">{cfg.nome}<span className="block text-[12px] font-normal text-suave">Administrador</span></span>
+        {MENU.map((m) => (
+          <NavLink key={m.para} to={m.para} end={m.para === '/admin'}
+            className={({ isActive }) => `flex flex-col items-center justify-center gap-1 rounded-xl text-[12px] no-underline md:h-[68px] lg:h-12 lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-[15px] ${isActive ? 'font-bold text-azul md:bg-azul-claro' : 'text-suave md:hover:bg-fundo'}`}>
+            <Icone nome={m.icone} tamanho={24} traco={1.9} />{m.nome}
+          </NavLink>
+        ))}
+      </nav>
+      <main className="mx-auto flex w-full min-w-0 max-w-[640px] flex-1 flex-col gap-3 p-4 pb-24 md:max-w-[1180px] md:gap-4 md:p-6 lg:p-8">
         {backend.modo === 'demo' && (
-          <div className="flex items-center justify-between rounded-xl bg-azul-claro px-3 py-2 text-[13px] font-bold text-azul-escuro">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-azul-claro px-3 py-2 text-[13px] font-bold text-azul-escuro">
             Modo demonstração (dados no navegador)
             <button type="button" className="border-none bg-transparent font-bold text-azul underline" onClick={() => nav('/terminal')}>Abrir terminal</button>
           </div>
         )}
         <Outlet />
       </main>
-      <nav aria-label="Menu" className="fixed inset-x-0 bottom-0 mx-auto grid h-[72px] max-w-[640px] grid-cols-5 border-t border-borda bg-white px-2">
-        {MENU.map((m) => (
-          <NavLink key={m.para} to={m.para} end={m.para === '/admin'}
-            className={({ isActive }) => `flex flex-col items-center justify-center gap-1 text-[12px] no-underline ${isActive ? 'font-bold text-azul' : 'text-suave'}`}>
-            <Icone nome={m.icone} tamanho={24} traco={1.9} />{m.nome}
-          </NavLink>
-        ))}
-      </nav>
     </div>
   );
 }

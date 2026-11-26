@@ -4,8 +4,8 @@
  * e pelo modo demonstração, e é coberto por testes.
  */
 import type { Centavos } from '../lib/money';
-import { addMeses } from '../lib/dates';
-import type { FinalizarVendaPayload, FormaPagamento, ItemCarrinho, Parcela } from './types';
+import { addDias, addMeses } from '../lib/dates';
+import type { FinalizarVendaPayload, FormaPagamento, ItemCarrinho, Parcela, PrazoCrediario } from './types';
 
 export const MAX_PAGAMENTOS = 4;
 
@@ -13,14 +13,15 @@ export function subtotalCarrinho(itens: Pick<ItemCarrinho, 'preco_unitario' | 'q
   return itens.reduce((s, i) => s + i.preco_unitario * i.quantidade, 0);
 }
 
-/** RF-14: divide em partes iguais; a diferença de centavos vai para a última. */
-export function dividirParcelas(valor: Centavos, n: number, primeiroVencimento: string): { numero: number; valor: Centavos; vencimento: string }[] {
+/** RF-14: divide em partes iguais; a diferença de centavos vai para a última.
+ *  Prazo: mensal (mesmo dia nos meses seguintes), quinzenal (a cada 15 dias) ou semanal (a cada 7 dias). */
+export function dividirParcelas(valor: Centavos, n: number, primeiroVencimento: string, prazo: PrazoCrediario = 'mensal'): { numero: number; valor: Centavos; vencimento: string }[] {
   if (n < 1) throw new Error('Número de parcelas inválido');
   const base = Math.floor(valor / n);
   return Array.from({ length: n }, (_, i) => ({
     numero: i + 1,
     valor: i === n - 1 ? valor - base * (n - 1) : base,
-    vencimento: addMeses(primeiroVencimento, i),
+    vencimento: prazo === 'mensal' ? addMeses(primeiroVencimento, i) : addDias(primeiroVencimento, i * (prazo === 'quinzenal' ? 15 : 7)),
   }));
 }
 
